@@ -2,22 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SAME SPOT - Co-Op</title>
     <!-- PeerJS for instant Room Multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
-            --bg: #000000;
-            --surface: #0a0a0a;
-            --surface-hover: #141414;
-            --border: #222222;
+            --bg: #050505;
+            --surface: #0f0f11;
+            --surface-hover: #1a1a1e;
+            --border: #222228;
             --border-bright: #ffffff;
             --text: #ffffff;
-            --text-dim: #666666;
-            --radius: 12px;
+            --text-dim: #71717a;
+            --radius: 16px;
             --green: #00ff66;
             --yellow: #ffcc00;
+            --red: #ff3333;
+            --glow: rgba(0, 255, 102, 0.15);
         }
 
         * {
@@ -26,18 +28,36 @@
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
             -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background-color: var(--bg);
             color: var(--text);
-            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 24px 16px;
+            padding: 16px;
             overflow-x: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Ambient Game Background Glow for Desktop */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 255, 102, 0.03) 0%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
         }
 
         /* Screen Transitions */
@@ -47,7 +67,8 @@
             align-items: center;
             width: 100%;
             max-width: 440px;
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            z-index: 1;
+            animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .screen.active {
@@ -55,27 +76,31 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(6px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         /* Typography */
         h1 {
             font-size: 2.5rem;
-            font-weight: 800;
+            font-weight: 900;
             letter-spacing: -0.05em;
             text-transform: uppercase;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             text-align: center;
+            background: linear-gradient(180deg, #FFFFFF 0%, #A1A1AA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .tagline {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 36px;
+            letter-spacing: 0.15em;
+            margin-bottom: 28px;
             text-align: center;
+            font-weight: 600;
         }
 
         /* Cards & UI Elements */
@@ -83,12 +108,13 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 24px;
+            padding: 20px;
             width: 100%;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         input {
@@ -96,22 +122,26 @@
             border: 1px solid var(--border);
             color: var(--text);
             padding: 14px;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.95rem;
             font-weight: 600;
             outline: none;
             width: 100%;
-            transition: border-color 0.2s ease;
+            transition: all 0.2s ease;
+            user-select: text;
+            -webkit-user-select: text;
         }
 
         input:focus {
             border-color: var(--border-bright);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
         }
 
         input.code-input {
-            letter-spacing: 0.2em;
+            letter-spacing: 0.25em;
             text-transform: uppercase;
             text-align: center;
+            font-size: 1.1rem;
         }
 
         button {
@@ -119,14 +149,14 @@
             color: var(--bg);
             border: 1px solid var(--text);
             padding: 14px 20px;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 0.85rem;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             cursor: pointer;
             width: 100%;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         button:hover {
@@ -135,7 +165,7 @@
         }
 
         button:active {
-            transform: scale(0.98);
+            transform: scale(0.97);
         }
 
         button.secondary {
@@ -169,10 +199,11 @@
             display: flex;
             align-items: center;
             color: var(--text-dim);
-            font-size: 0.75rem;
-            letter-spacing: 0.1em;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
-            margin: 6px 0;
+            margin: 4px 0;
         }
 
         .divider::before, .divider::after {
@@ -184,15 +215,17 @@
         }
 
         .room-code-badge {
-            background: var(--surface);
+            background: var(--bg);
             border: 1px dashed var(--border-bright);
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 10px;
             text-align: center;
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: 0.2em;
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: 0.25em;
             user-select: all;
+            color: var(--green);
+            text-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
         }
 
         /* HUD & Vector Hearts */
@@ -202,7 +235,7 @@
             align-items: center;
             gap: 12px;
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .hud-top {
@@ -214,13 +247,17 @@
 
         .lives-container {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             align-items: center;
+            background: var(--surface);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
         }
 
         .heart-svg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
             fill: var(--text);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -234,28 +271,30 @@
         }
 
         .turn-banner {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 800;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            padding: 6px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             background: var(--surface);
             border: 1px solid var(--border);
             color: var(--yellow);
             transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         .turn-banner.my-turn {
             color: var(--bg);
             background: var(--green);
             border-color: var(--green);
+            box-shadow: 0 0 16px rgba(0, 255, 102, 0.4);
         }
 
         .status-badge {
             font-size: 0.75rem;
             font-weight: 700;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
             color: var(--text-dim);
             text-align: center;
@@ -265,24 +304,24 @@
         .board-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
+            gap: 10px;
             width: 100%;
             transition: opacity 0.3s ease;
         }
 
         .board-grid.turn-disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             pointer-events: none;
         }
 
         .circle {
             aspect-ratio: 1;
             border-radius: 50%;
-            background: var(--bg);
+            background: var(--surface);
             border: 1px solid var(--border);
             color: var(--text);
-            font-size: 1.15rem;
-            font-weight: 700;
+            font-size: 1.1rem;
+            font-weight: 800;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -290,18 +329,22 @@
             user-select: none;
             opacity: 0;
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            animation-delay: calc(var(--i) * 0.02s);
-            transition: transform 0.3s ease, border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, opacity 0.4s ease;
+            animation-delay: calc(var(--i) * 0.015s);
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .circle:hover:not(.disabled):not(.fade-out) {
-            border-color: var(--border-bright);
-            transform: scale(1.08);
-            background: var(--surface-hover);
+        /* Desktop Hover state */
+        @media (hover: hover) {
+            .circle:hover:not(.disabled):not(.fade-out) {
+                border-color: var(--border-bright);
+                transform: translateY(-2px) scale(1.08);
+                background: var(--surface-hover);
+                box-shadow: 0 6px 16px rgba(255,255,255,0.1);
+            }
         }
 
         .circle:active:not(.disabled):not(.fade-out) {
-            transform: scale(0.95);
+            transform: scale(0.92);
         }
 
         .circle.disabled {
@@ -314,9 +357,9 @@
         }
 
         .circle.wrong {
-            background: #180000;
-            border-color: #ff3333;
-            color: #ff3333;
+            background: #2a0808;
+            border-color: var(--red);
+            color: var(--red);
             animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
         }
 
@@ -326,14 +369,14 @@
             color: #000000 !important;
             font-weight: 900;
             opacity: 1 !important;
-            box-shadow: 0 0 20px rgba(0, 255, 102, 0.8);
+            box-shadow: 0 0 25px rgba(0, 255, 102, 0.9);
             animation: winPulse 0.9s infinite alternate ease-in-out !important;
             z-index: 10;
         }
 
         .circle.fade-out {
             opacity: 0 !important;
-            transform: scale(0.4) !important;
+            transform: scale(0.3) !important;
             pointer-events: none;
         }
 
@@ -350,8 +393,8 @@
                 box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
             }
             to {
-                transform: scale(1.18);
-                box-shadow: 0 0 30px rgba(0, 255, 102, 1);
+                transform: scale(1.15);
+                box-shadow: 0 0 35px rgba(0, 255, 102, 1);
             }
         }
 
@@ -362,14 +405,13 @@
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 14px;
-            margin-top: 20px;
             display: flex;
             flex-direction: column;
             gap: 10px;
         }
 
         .chat-messages {
-            height: 90px;
+            height: 85px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -397,12 +439,12 @@
             color: var(--text-dim);
             margin-right: 6px;
             text-transform: uppercase;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             letter-spacing: 0.05em;
         }
 
         .chat-msg.me .sender {
-            color: var(--text);
+            color: var(--green);
         }
 
         .chat-form {
@@ -412,14 +454,14 @@
 
         .chat-form button {
             width: auto;
+            padding: 10px 16px;
         }
 
         /* Local Split Screen Mode */
         .split-container {
             display: none;
-            gap: 32px;
+            gap: 20px;
             width: 100%;
-            max-width: 900px;
         }
 
         .split-column {
@@ -430,11 +472,78 @@
         }
 
         .split-title {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-dim);
             letter-spacing: 0.1em;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             text-transform: uppercase;
+            font-weight: 800;
+        }
+
+        .shortcut-tip {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-align: center;
+            margin-top: 4px;
+            display: none;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* DESKTOP GAME ENGINE LAYOUT (Min-width: 768px) */
+        /* ------------------------------------------------------------- */
+        @media (min-width: 768px) {
+            body {
+                padding: 40px;
+            }
+
+            .shortcut-tip {
+                display: block;
+            }
+
+            #game-screen {
+                max-width: 860px;
+                display: none;
+                grid-template-columns: 1fr 300px;
+                grid-template-rows: auto 1fr auto;
+                gap: 20px;
+                align-items: start;
+            }
+
+            #game-screen.active {
+                display: grid;
+            }
+
+            #game-screen .hud {
+                grid-column: 1 / -1;
+                margin-bottom: 0;
+            }
+
+            #single-board {
+                grid-column: 1 / 2;
+            }
+
+            .split-container {
+                grid-column: 1 / -1;
+            }
+
+            #chat-box {
+                grid-column: 2 / 3;
+                height: 100%;
+                margin-top: 0;
+                justify-content: space-between;
+            }
+
+            .chat-messages {
+                height: 240px;
+            }
+
+            #restart-btn {
+                grid-column: 1 / -1;
+            }
+
+            .desktop-exit-btn {
+                grid-column: 2 / 3;
+            }
         }
 
         @media (max-width: 480px) {
@@ -514,8 +623,6 @@
             </div>
         </div>
 
-        <button id="restart-btn" style="margin-top: 20px; display: none;" onclick="restartGame()">Play Again</button>
-
         <!-- Live Chat Section -->
         <div id="chat-box" class="chat-card">
             <div class="chat-messages" id="chat-messages">
@@ -525,9 +632,10 @@
                 <input type="text" id="chat-input" placeholder="Type message..." autocomplete="off">
                 <button type="submit" class="secondary">Send</button>
             </form>
+            <div class="shortcut-tip">Press <b>Enter</b> to chat • <b>Esc</b> to unfocus</div>
         </div>
 
-        <button class="secondary" style="margin-top: 16px;" onclick="exitToLobby()">Exit to Lobby</button>
+        <button id="restart-btn" style="display: none;" onclick="restartGame()">Play Again</button>
     </div>
 
     <script>
@@ -542,9 +650,30 @@
         let lives = 3;
         let gameOver = false;
         let isLocalMode = false;
-        
-        // Turn Control State ('host' or 'guest' in online mode; 1 or 2 in local mode)
         let activeTurn = 'host';
+
+        // Tactile Haptics helper for mobile
+        function triggerHaptic(type) {
+            if (!navigator.vibrate) return;
+            if (type === 'tap') navigator.vibrate(12);
+            if (type === 'wrong') navigator.vibrate([30, 40, 30]);
+            if (type === 'win') navigator.vibrate([80, 50, 100, 50, 150]);
+        }
+
+        // Desktop Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            const chatInput = document.getElementById('chat-input');
+            const gameScreen = document.getElementById('game-screen');
+
+            if (!gameScreen.classList.contains('active')) return;
+
+            if (e.key === 'Enter' && document.activeElement !== chatInput) {
+                e.preventDefault();
+                chatInput.focus();
+            } else if (e.key === 'Escape' && document.activeElement === chatInput) {
+                chatInput.blur();
+            }
+        });
 
         function getNickname() {
             const input = document.getElementById('nickname-input').value.trim();
@@ -632,6 +761,7 @@
                 div.style.setProperty('--i', index);
                 div.onclick = () => {
                     if (gameOver || div.classList.contains('disabled')) return;
+                    triggerHaptic('tap');
                     clickHandler(index, div);
                 };
                 container.appendChild(div);
@@ -706,7 +836,6 @@
         }
 
         function handleGuess(index, el) {
-            // Check if it is currently my turn in online mode
             const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
             if (!isLocalMode && !isMyTurn) return;
 
@@ -723,6 +852,7 @@
             if (index === targetIndex) {
                 gameOver = true;
                 element.classList.add('correct');
+                triggerHaptic('win');
                 handleVictory(isMe);
                 
                 const siblings = element.parentElement.children;
@@ -732,6 +862,7 @@
             } else {
                 element.classList.add('wrong');
                 element.classList.add('disabled');
+                triggerHaptic('wrong');
                 
                 let message = "Wrong spot!";
                 if (!isLocalMode) {
@@ -757,7 +888,7 @@
             if(isHost || isLocalMode) {
                 setTimeout(() => {
                     document.getElementById('restart-btn').style.display = 'block';
-                }, 1000);
+                }, 800);
             }
         }
 
@@ -775,7 +906,7 @@
             if(isHost || isLocalMode) {
                 setTimeout(() => {
                     document.getElementById('restart-btn').style.display = 'block';
-                }, 1000);
+                }, 800);
             }
         }
 
@@ -787,7 +918,6 @@
             }
         }
 
-        // --- NETWORK INITIALIZATION ---
         function initPeer(id) {
             const options = {
                 debug: 1,

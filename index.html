@@ -85,26 +85,20 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
             margin-bottom: 20px;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 8px;
-            width: 100%;
         }
 
         input {
             background: var(--bg);
             border: 1px solid var(--border);
             color: var(--text);
-            padding: 12px 14px;
+            padding: 14px;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             font-weight: 600;
             outline: none;
-            flex: 1;
+            width: 100%;
             transition: border-color 0.2s ease;
         }
 
@@ -113,21 +107,23 @@
         }
 
         input.code-input {
-            letter-spacing: 0.1em;
+            letter-spacing: 0.2em;
             text-transform: uppercase;
+            text-align: center;
         }
 
         button {
             background: var(--text);
             color: var(--bg);
             border: 1px solid var(--text);
-            padding: 12px 20px;
+            padding: 14px 20px;
             border-radius: 8px;
             font-size: 0.85rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             cursor: pointer;
+            width: 100%;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -151,6 +147,22 @@
             background: var(--surface-hover);
         }
 
+        button.text-only {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            padding: 8px;
+            width: auto;
+        }
+
+        button.text-only:hover {
+            color: var(--text);
+            background: transparent;
+            transform: none;
+        }
+
         .divider {
             display: flex;
             align-items: center;
@@ -158,7 +170,7 @@
             font-size: 0.75rem;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            margin: 4px 0;
+            margin: 6px 0;
         }
 
         .divider::before, .divider::after {
@@ -308,7 +320,7 @@
         }
 
         .chat-messages {
-            height: 100px;
+            height: 90px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -347,6 +359,10 @@
         .chat-form {
             display: flex;
             gap: 8px;
+        }
+
+        .chat-form button {
+            width: auto;
         }
 
         /* Local Split Screen Mode */
@@ -391,14 +407,14 @@
 
         <div class="card">
             <button onclick="createRoom()">Create New Room</button>
+            
             <div class="divider">or join with code</div>
-            <div class="input-group">
-                <input type="text" id="room-input" class="code-input" placeholder="CODE" maxlength="4" autocomplete="off">
-                <button class="secondary" onclick="joinRoomInput()">Join</button>
-            </div>
+            
+            <input type="text" id="room-input" class="code-input" placeholder="CODE" maxlength="4" autocomplete="off">
+            <button class="secondary" onclick="joinRoomInput()">Join Room</button>
         </div>
 
-        <button class="secondary" style="width: 100%;" onclick="startLocalMode()">Offline Split-Screen</button>
+        <button class="secondary" onclick="startLocalMode()">Offline Split-Screen</button>
     </div>
 
     <!-- WAITING ROOM SCREEN -->
@@ -411,7 +427,8 @@
             <button class="secondary" onclick="copyRoomLink()">Copy Invite Link</button>
         </div>
 
-        <div class="status-badge" id="waiting-status">Waiting for player 2 to join...</div>
+        <div class="status-badge" id="waiting-status" style="margin-bottom: 20px;">Waiting for player 2...</div>
+        <button class="secondary" onclick="exitToLobby()">Exit to Lobby</button>
     </div>
 
     <!-- GAMEPLAY SCREEN -->
@@ -423,6 +440,7 @@
                 <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             </div>
             <div class="status-badge" id="game-status">FIND THE MATCH</div>
+            <button class="text-only" onclick="exitToLobby()">✕ EXIT</button>
         </div>
 
         <!-- Single View Grid -->
@@ -440,7 +458,7 @@
             </div>
         </div>
 
-        <button id="restart-btn" style="margin-top: 20px; width: 100%; display: none;" onclick="restartGame()">Play Again</button>
+        <button id="restart-btn" style="margin-top: 20px; display: none;" onclick="restartGame()">Play Again</button>
 
         <!-- Live Chat Section -->
         <div id="chat-box" class="chat-card">
@@ -452,6 +470,8 @@
                 <button type="submit" class="secondary">Send</button>
             </form>
         </div>
+
+        <button class="secondary" style="margin-top: 16px;" onclick="exitToLobby()">Exit to Lobby</button>
     </div>
 
     <script>
@@ -554,6 +574,37 @@
                     appendChatMessage('Opponent', data.text, false);
                 }
             });
+
+            conn.on('close', () => {
+                appendChatMessage('System', 'Opponent disconnected.', false);
+            });
+        }
+
+        function exitToLobby() {
+            if (conn) {
+                try { conn.close(); } catch(e){}
+                conn = null;
+            }
+            if (peer) {
+                try { peer.destroy(); } catch(e){}
+                peer = null;
+            }
+
+            roomCode = "";
+            isHost = false;
+            isLocalMode = false;
+            gameOver = false;
+
+            // Reset Chat
+            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to room chat.</div>';
+            document.getElementById('chat-box').style.display = 'flex';
+            document.getElementById('single-board').style.display = 'grid';
+            document.getElementById('split-board').style.display = 'none';
+
+            // Clean URL query params if joined via link
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            showScreen('lobby-screen');
         }
 
         // Chat functionality

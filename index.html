@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SAME SPOT - Co-Op</title>
-    <!-- PeerJS for instant Room Multiplayer -->
+    <!-- PeerJS for instant Room & Friend Multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -46,7 +46,6 @@
             -webkit-user-select: none;
         }
 
-        /* Ambient Game Background Glow */
         body::before {
             content: '';
             position: fixed;
@@ -60,7 +59,6 @@
             z-index: 0;
         }
 
-        /* Screen Transitions */
         .screen {
             display: none;
             flex-direction: column;
@@ -80,7 +78,6 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* Typography */
         h1 {
             font-size: 2.5rem;
             font-weight: 900;
@@ -103,7 +100,6 @@
             font-weight: 600;
         }
 
-        /* Cards & Buttons */
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -137,13 +133,6 @@
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
         }
 
-        input.code-input {
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            text-align: center;
-            font-size: 1.1rem;
-        }
-
         button {
             background: var(--text);
             color: var(--bg);
@@ -163,623 +152,175 @@
             gap: 8px;
         }
 
-        button:hover {
-            background: #e6e6e6;
-            transform: translateY(-1px);
-        }
-
-        button:active {
-            transform: scale(0.97);
-        }
+        button:hover { background: #e6e6e6; transform: translateY(-1px); }
+        button:active { transform: scale(0.97); }
 
         button.secondary {
             background: transparent;
             color: var(--text);
             border-color: var(--border);
         }
+        button.secondary:hover { border-color: var(--border-bright); background: var(--surface-hover); }
 
-        button.secondary:hover {
-            border-color: var(--border-bright);
-            background: var(--surface-hover);
-        }
+        button.accent { background: transparent; color: var(--green); border-color: var(--green); }
+        button.accent:hover { background: rgba(0, 255, 102, 0.1); }
+        
+        button.text-only { background: transparent; border: none; color: var(--text-dim); font-size: 0.75rem; letter-spacing: 0.08em; padding: 8px; width: auto; }
+        button.text-only:hover { color: var(--text); transform: none; }
 
-        button.accent {
-            background: transparent;
-            color: var(--green);
-            border-color: var(--green);
-        }
+        button.small-btn { padding: 8px 12px; font-size: 0.7rem; width: auto; border-radius: 8px; }
 
-        button.accent:hover {
-            background: rgba(0, 255, 102, 0.1);
-        }
-
-        button.text-only {
-            background: transparent;
-            border: none;
-            color: var(--text-dim);
-            font-size: 0.75rem;
-            letter-spacing: 0.08em;
-            padding: 8px;
-            width: auto;
-        }
-
-        button.text-only:hover {
-            color: var(--text);
-            background: transparent;
-            transform: none;
-        }
-
-        .icon-svg {
-            width: 16px;
-            height: 16px;
-            stroke-width: 2.2;
-            flex-shrink: 0;
-        }
+        .icon-svg { width: 16px; height: 16px; stroke-width: 2.2; flex-shrink: 0; }
 
         .divider {
-            display: flex;
-            align-items: center;
-            color: var(--text-dim);
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            margin: 4px 0;
+            display: flex; align-items: center; color: var(--text-dim); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin: 4px 0;
         }
+        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); margin: 0 12px; }
 
-        .divider::before, .divider::after {
-            content: "";
-            flex: 1;
-            height: 1px;
-            background: var(--border);
-            margin: 0 12px;
-        }
-
-        .room-code-badge {
-            background: var(--bg);
-            border: 1px dashed var(--border-bright);
-            padding: 16px;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 1.6rem;
-            font-weight: 900;
-            letter-spacing: 0.25em;
-            user-select: all;
-            color: var(--green);
-            text-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
-        }
-
-        /* Loading Screen Components */
-        .loading-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 28px 20px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
-            text-align: center;
-        }
-
-        .spinner-ring {
-            width: 48px;
-            height: 48px;
-            border: 3px solid var(--border);
-            border-top-color: var(--green);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .progress-bar-track {
-            width: 100%;
-            height: 8px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #00b347 0%, var(--green) 100%);
-            border-radius: 10px;
-            transition: width 0.1s linear;
-            box-shadow: 0 0 12px rgba(0, 255, 102, 0.5);
-        }
-
-        .tip-box {
-            min-height: 80px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .tip-label {
-            font-size: 0.68rem;
-            font-weight: 800;
-            letter-spacing: 0.15em;
-            color: var(--green);
-            text-transform: uppercase;
-        }
-
-        .tip-text {
-            font-size: 0.9rem;
-            color: var(--text);
-            line-height: 1.4;
-            font-weight: 500;
-            max-width: 320px;
-        }
-
-        /* Guidebook Modal Components */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(5, 5, 5, 0.88);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .guidebook-card {
-            background: var(--surface);
-            border: 1px solid var(--border-bright);
-            border-radius: var(--radius);
-            width: 100%;
-            max-width: 480px;
-            max-height: 85dvh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            overflow: hidden;
-        }
-
-        .guidebook-header {
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--border);
+        /* Profile & Friends UI */
+        .profile-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .guidebook-header h2 {
-            font-size: 1.2rem;
-            font-weight: 900;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-
-        .guidebook-body {
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-            user-select: text;
-            -webkit-user-select: text;
-        }
-
-        .guidebook-body::-webkit-scrollbar {
-            width: 5px;
-        }
-        .guidebook-body::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
-        }
-
-        .guide-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .guide-section h3 {
-            font-size: 0.8rem;
-            color: var(--green);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .guide-section h3 svg {
-            stroke: var(--green);
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-        }
-
-        .guide-section p {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            line-height: 1.45;
-        }
-
-        .guide-bullet-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .guide-bullet-list li {
-            font-size: 0.85rem;
-            color: var(--text);
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            line-height: 1.4;
-        }
-
-        .guide-bullet-list li::before {
-            content: '•';
-            color: var(--green);
-            font-weight: bold;
-        }
-
-        /* HUD & Gameplay Elements */
-        .hud {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
+            padding: 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
             margin-bottom: 16px;
-        }
-
-        .hud-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             width: 100%;
         }
 
-        .lives-container {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            background: var(--surface);
-            padding: 6px 12px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-        }
+        .profile-info { display: flex; flex-direction: column; }
+        .profile-name { font-size: 1.1rem; font-weight: 800; color: var(--text); }
+        .profile-user { font-size: 0.8rem; font-weight: 600; color: var(--green); letter-spacing: 0.05em; margin-top: 2px;}
 
-        .heart-svg {
-            width: 20px;
-            height: 20px;
-            fill: var(--text);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .friend-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
         }
+        .friend-item-info { display: flex; flex-direction: column; }
+        .friend-handle { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+        
+        .add-friend-row { display: flex; gap: 8px; margin-top: 8px; }
 
-        .heart-svg.lost {
-            fill: transparent;
-            stroke: var(--border);
-            stroke-width: 2;
-            transform: scale(0.75);
-            opacity: 0.3;
+        .online-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); display: inline-block; margin-right: 6px;
         }
+        .online-dot.active { background: var(--green); box-shadow: 0 0 8px rgba(0, 255, 102, 0.6); }
 
-        .turn-banner {
-            font-size: 0.75rem;
-            font-weight: 800;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            padding: 6px 16px;
-            border-radius: 20px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--yellow);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        /* Modal Overlays */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 5, 5, 0.88); backdrop-filter: blur(8px);
+            z-index: 100; display: none; align-items: center; justify-content: center; padding: 16px;
+            animation: fadeIn 0.2s ease;
         }
+        .modal-overlay.active { display: flex; }
 
-        .turn-banner.my-turn {
-            color: var(--bg);
-            background: var(--green);
-            border-color: var(--green);
-            box-shadow: 0 0 16px rgba(0, 255, 102, 0.4);
+        .invite-modal {
+            background: var(--surface); border: 1px solid var(--green); border-radius: var(--radius);
+            padding: 24px; width: 100%; max-width: 320px; text-align: center;
+            box-shadow: 0 0 40px rgba(0, 255, 102, 0.15);
         }
+        
+        /* Game HUD & Board (from previous setup) */
+        .hud { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; margin-bottom: 16px; }
+        .hud-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .lives-container { display: flex; gap: 6px; align-items: center; background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
+        .heart-svg { width: 20px; height: 20px; fill: var(--text); transition: all 0.4s ease; }
+        .heart-svg.lost { fill: transparent; stroke: var(--border); stroke-width: 2; transform: scale(0.75); opacity: 0.3; }
+        
+        .turn-banner { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; padding: 6px 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--yellow); }
+        .turn-banner.my-turn { color: var(--bg); background: var(--green); border-color: var(--green); }
+        .status-badge { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase; }
 
-        .status-badge {
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            text-align: center;
-        }
-
-        .board-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            width: 100%;
-            transition: opacity 0.3s ease;
-        }
-
-        .board-grid.turn-disabled {
-            opacity: 0.35;
-            pointer-events: none;
-        }
-
+        .board-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; transition: opacity 0.3s ease; }
+        .board-grid.turn-disabled { opacity: 0.35; pointer-events: none; }
+        
         .circle {
-            aspect-ratio: 1;
-            border-radius: 50%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-size: 1.1rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            opacity: 0;
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            animation-delay: calc(var(--i) * 0.015s);
-            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+            aspect-ratio: 1; border-radius: 50%; background: var(--surface); border: 1px solid var(--border);
+            color: var(--text); font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; animation: popIn 0.4s forwards; animation-delay: calc(var(--i) * 0.015s);
+            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
         }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+        
+        .circle:active:not(.disabled) { transform: scale(0.92); }
+        .circle.wrong { background: #2a0808; border-color: var(--red); color: var(--red); }
+        .circle.correct { background: var(--green) !important; border-color: var(--green) !important; color: #000 !important; opacity: 1 !important; box-shadow: 0 0 25px rgba(0, 255, 102, 0.9); z-index: 10; transform: scale(1.15); }
+        .circle.fade-out { opacity: 0 !important; transform: scale(0.3) !important; pointer-events: none; }
+        .circle.disabled { cursor: default; }
 
-        @media (hover: hover) {
-            .circle:hover:not(.disabled):not(.fade-out) {
-                border-color: var(--border-bright);
-                transform: translateY(-2px) scale(1.08);
-                background: var(--surface-hover);
-                box-shadow: 0 6px 16px rgba(255,255,255,0.1);
-            }
-        }
-
-        .circle:active:not(.disabled):not(.fade-out) {
-            transform: scale(0.92);
-        }
-
-        .circle.disabled {
-            cursor: default;
-        }
-
-        @keyframes popIn {
-            from { opacity: 0; transform: scale(0.3); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .circle.wrong {
-            background: #2a0808;
-            border-color: var(--red);
-            color: var(--red);
-            animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-        }
-
-        .circle.correct {
-            background: var(--green) !important;
-            border-color: var(--green) !important;
-            color: #000000 !important;
-            font-weight: 900;
-            opacity: 1 !important;
-            box-shadow: 0 0 25px rgba(0, 255, 102, 0.9);
-            animation: winPulse 0.9s infinite alternate ease-in-out !important;
-            z-index: 10;
-        }
-
-        .circle.fade-out {
-            opacity: 0 !important;
-            transform: scale(0.3) !important;
-            pointer-events: none;
-        }
-
-        @keyframes shake {
-            10%, 90% { transform: translateX(-2px); }
-            20%, 80% { transform: translateX(4px); }
-            30%, 50%, 70% { transform: translateX(-4px); }
-            40%, 60% { transform: translateX(4px); }
-        }
-
-        @keyframes winPulse {
-            from { transform: scale(1); box-shadow: 0 0 10px rgba(0, 255, 102, 0.4); }
-            to { transform: scale(1.15); box-shadow: 0 0 35px rgba(0, 255, 102, 1); }
-        }
-
-        /* Chat Component */
-        .chat-card {
-            width: 100%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .chat-messages {
-            height: 85px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding-right: 4px;
-        }
-
-        .chat-messages::-webkit-scrollbar {
-            width: 4px;
-        }
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: var(--border);
-            border-radius: 4px;
-        }
-
-        .chat-msg {
-            font-size: 0.8rem;
-            line-height: 1.3;
-            word-break: break-word;
-        }
-
-        .chat-msg .sender {
-            font-weight: 700;
-            color: var(--text-dim);
-            margin-right: 6px;
-            text-transform: uppercase;
-            font-size: 0.65rem;
-            letter-spacing: 0.05em;
-        }
-
-        .chat-msg.me .sender {
-            color: var(--green);
-        }
-
-        .chat-form {
-            display: flex;
-            gap: 8px;
-        }
-
-        .chat-form button {
-            width: auto;
-            padding: 10px 16px;
-        }
-
-        /* Local Split View */
-        .split-container {
-            display: none;
-            gap: 20px;
-            width: 100%;
-        }
-
-        .split-column {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .split-title {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            letter-spacing: 0.1em;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
-        .shortcut-tip {
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            text-align: center;
-            margin-top: 4px;
-            display: none;
-        }
-
-        /* Desktop Layout Override */
+        /* Chat */
+        .chat-card { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+        .chat-messages { height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .chat-msg { font-size: 0.8rem; line-height: 1.3; }
+        .chat-msg .sender { font-weight: 700; color: var(--text-dim); margin-right: 6px; font-size: 0.65rem; text-transform: uppercase; }
+        .chat-msg.me .sender { color: var(--green); }
+        .chat-form { display: flex; gap: 8px; }
+        
+        /* Desktop specific */
         @media (min-width: 768px) {
             body { padding: 40px; }
-            .shortcut-tip { display: block; }
-
-            #game-screen {
-                max-width: 860px;
-                display: none;
-                grid-template-columns: 1fr 300px;
-                grid-template-rows: auto 1fr auto;
-                gap: 20px;
-                align-items: start;
-            }
-
+            #game-screen { max-width: 860px; grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr auto; gap: 20px; align-items: start; }
             #game-screen.active { display: grid; }
-            #game-screen .hud { grid-column: 1 / -1; margin-bottom: 0; }
+            #game-screen .hud { grid-column: 1 / -1; }
             #single-board { grid-column: 1 / 2; }
-            .split-container { grid-column: 1 / -1; }
-            #chat-box { grid-column: 2 / 3; height: 100%; margin-top: 0; justify-content: space-between; }
+            #chat-box { grid-column: 2 / 3; height: 100%; justify-content: space-between; }
             .chat-messages { height: 240px; }
             #restart-btn { grid-column: 1 / -1; }
-        }
-
-        @media (max-width: 480px) {
-            .board-grid { gap: 8px; }
-            .circle { font-size: 1rem; }
         }
     </style>
 </head>
 <body>
 
-    <!-- LOBBY SCREEN -->
-    <div id="lobby-screen" class="screen active">
-        <h1>SAME SPOT</h1>
-        <div class="tagline">Co-Op Number Finder</div>
+    <!-- INITIAL SETUP SCREEN -->
+    <div id="setup-screen" class="screen">
+        <h1>WELCOME</h1>
+        <div class="tagline">Create your profile to join the network</div>
 
         <div class="card">
-            <input type="text" id="nickname-input" placeholder="YOUR NICKNAME" maxlength="12" autocomplete="off">
+            <label style="font-size: 0.75rem; color: var(--text-dim); margin-left: 4px; font-weight: 700;">DISPLAY NAME</label>
+            <input type="text" id="setup-displayname" placeholder="How others see you" maxlength="16" autocomplete="off">
             
-            <div class="divider">create or join</div>
-
-            <button onclick="createRoom()">Create New Room</button>
+            <label style="font-size: 0.75rem; color: var(--text-dim); margin-left: 4px; margin-top: 8px; font-weight: 700;">USERNAME</label>
+            <input type="text" id="setup-username" placeholder="@TTVsteph2K" maxlength="15" autocomplete="off">
             
-            <div class="divider">or enter code</div>
-            
-            <input type="text" id="room-input" class="code-input" placeholder="CODE" maxlength="4" autocomplete="off">
-            <button class="secondary" onclick="joinRoomInput()">Join Room</button>
-        </div>
-
-        <div style="display: flex; gap: 10px; width: 100%;">
-            <button class="secondary" onclick="startLocalMode()">Offline Split-Screen</button>
-            <button class="accent" onclick="openGuidebook()">
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                Guidebook
-            </button>
+            <button style="margin-top: 12px;" onclick="saveProfile()">Continue</button>
         </div>
     </div>
 
-    <!-- WAITING ROOM SCREEN -->
-    <div id="waiting-screen" class="screen">
-        <h1>ROOM CREATED</h1>
-        <div class="tagline">Share code with your teammate</div>
-
-        <div class="card">
-            <div class="room-code-badge" id="code-display">----</div>
-            <button class="secondary" onclick="copyRoomLink()">
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                Copy Invite Link
+    <!-- MAIN HUB (FRIENDS & LOBBY) -->
+    <div id="hub-screen" class="screen">
+        <div class="profile-header">
+            <div class="profile-info">
+                <div class="profile-name" id="hub-displayname">Player</div>
+                <div class="profile-user" id="hub-username">@player</div>
+            </div>
+            <button class="text-only" onclick="editProfile()">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
         </div>
 
-        <div class="status-badge" id="waiting-status" style="margin-bottom: 20px;">Waiting for partner...</div>
-        <button class="secondary" onclick="exitToLobby()">Exit to Lobby</button>
-    </div>
-
-    <!-- 5-SECOND LOADING SCREEN WITH TIPS -->
-    <div id="loading-screen" class="screen">
-        <h1 style="font-size: 1.8rem; margin-bottom: 2px;">MATCH LOADING</h1>
-        <div class="tagline" id="loading-status-subtitle">Preparing board matrices...</div>
-
-        <div class="loading-card">
-            <div class="spinner-ring"></div>
+        <div class="card">
+            <h3 style="font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Friends List
+            </h3>
             
-            <div class="tip-box">
-                <div class="tip-label">PRO TIP</div>
-                <div class="tip-text" id="tip-display">Loading game guide...</div>
+            <div id="friends-list-container">
+                <!-- Dynamically populated -->
             </div>
 
-            <div class="progress-bar-track">
-                <div class="progress-bar-fill" id="loading-bar-fill"></div>
+            <div class="divider">add new friend</div>
+            <div class="add-friend-row">
+                <input type="text" id="add-friend-input" placeholder="@playersname" style="flex: 1;" autocomplete="off">
+                <button class="secondary" style="width: auto;" onclick="addFriend()">Add</button>
             </div>
+        </div>
+        
+        <div class="status-badge" id="hub-status-text" style="margin-bottom: 16px;">
+            <span class="online-dot active"></span> Listening for invites...
         </div>
     </div>
 
@@ -793,243 +334,341 @@
                     <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </div>
                 <div id="turn-banner" class="turn-banner">YOUR TURN</div>
-                <button class="text-only" onclick="exitToLobby()">
+                <button class="text-only" onclick="exitGame()">
                     <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    EXIT
+                    LEAVE
                 </button>
             </div>
             <div class="status-badge" id="game-status">FIND THE 1 MATCHING SPOT</div>
         </div>
 
-        <!-- Single View Grid -->
         <div id="single-board" class="board-grid"></div>
 
-        <!-- Local Split View -->
-        <div id="split-board" class="split-container">
-            <div class="split-column">
-                <div class="split-title" id="p1-title">Player 1</div>
-                <div id="p1-grid" class="board-grid"></div>
-            </div>
-            <div class="split-column">
-                <div class="split-title" id="p2-title">Player 2</div>
-                <div id="p2-grid" class="board-grid"></div>
-            </div>
-        </div>
-
-        <!-- Live Chat Section -->
         <div id="chat-box" class="chat-card">
             <div class="chat-messages" id="chat-messages">
-                <div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>
+                <div class="chat-msg"><span class="sender">System</span>Connected to partner.</div>
             </div>
             <form class="chat-form" onsubmit="sendChatMessage(event)">
                 <input type="text" id="chat-input" placeholder="Type message..." autocomplete="off">
                 <button type="submit" class="secondary">Send</button>
             </form>
-            <div class="shortcut-tip">Press <b>Enter</b> to chat • <b>Esc</b> to unfocus</div>
         </div>
 
-        <button id="restart-btn" style="display: none;" onclick="restartGame()">Play Again</button>
+        <button id="restart-btn" style="display: none;" onclick="hostRematch()">Play Again</button>
     </div>
 
-    <!-- GUIDEBOOK MODAL -->
-    <div id="guidebook-modal" class="modal-overlay">
-        <div class="guidebook-card">
-            <div class="guidebook-header">
-                <h2>HOW TO PLAY</h2>
-                <button class="text-only" onclick="closeGuidebook()">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 18px; height: 18px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="guidebook-body">
-                <div class="guide-section">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-                        The Core Objective
-                    </h3>
-                    <p>You and your teammate each see a grid of 20 numbers. Out of all 20 numbers, <b>EXACTLY ONE</b> number exists on both of your boards at the same time!</p>
-                </div>
-
-                <div class="guide-section">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                        Shared Lives & Turn Taking
-                    </h3>
-                    <ul class="guide-bullet-list">
-                        <li>You and your partner share <b>3 Hearts</b>.</li>
-                        <li>Players take turns calling out or clicking a number.</li>
-                        <li><b>Correct Guess:</b> Instant Victory for both players!</li>
-                        <li><b>Wrong Guess:</b> Loses 1 Heart and hands turn over to partner.</li>
-                    </ul>
-                </div>
-
-                <div class="guide-section">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        Communication is Key
-                    </h3>
-                    <p>Call out 2-digit numbers to your partner in chat or out loud. Read numbers in groups (e.g., "Do you have 42, 88, or 19?") to narrow down the target fast.</p>
-                </div>
-
-                <div class="guide-section">
-                    <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        Desktop & Mobile Shortcuts
-                    </h3>
-                    <ul class="guide-bullet-list">
-                        <li><b>Desktop:</b> Hit <mark style="background:#222; color:#fff; padding:2px 6px; border-radius:4px;">Enter</mark> to type in chat instantly; press <mark style="background:#222; color:#fff; padding:2px 6px; border-radius:4px;">Esc</mark> to focus back on the board.</li>
-                        <li><b>Mobile:</b> Features native haptic vibration feedback for every tap, error, and victory!</li>
-                    </ul>
-                </div>
-
-                <button style="margin-top: 8px;" onclick="closeGuidebook()">Got It, Let's Play!</button>
+    <!-- INCOMING INVITE MODAL -->
+    <div id="invite-modal" class="modal-overlay">
+        <div class="invite-modal">
+            <svg class="icon-svg" style="width: 32px; height: 32px; color: var(--green); margin-bottom: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <h2 style="font-size: 1.2rem; margin-bottom: 4px;">Game Invite</h2>
+            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 24px;" id="invite-caller-text">@player wants to play!</p>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="secondary" onclick="declineInvite()">Decline</button>
+                <button class="accent" onclick="acceptInvite()">Accept</button>
             </div>
         </div>
     </div>
 
     <script>
+        let myProfile = { displayName: '', username: '' };
+        let friendsList = [];
+        
         let peer = null;
-        let conn = null;
-        let roomCode = "";
+        let conn = null; // Active game connection
+        let incomingConn = null; // Temporary connection for invite
+        
         let isHost = false;
-        let myNickname = "Player";
-        let partnerNickname = "Partner";
+        let partnerProfile = { displayName: 'Partner', username: '' };
+        
+        // Gameplay State
         let myBoard = [];
         let targetIndex = -1;
         let lives = 3;
         let gameOver = false;
-        let isLocalMode = false;
         let activeTurn = 'host';
 
-        // Gameplay tips database
-        const TIPS = [
-            "Both boards have 20 numbers, but EXACTLY ONE number is identical on both screens!",
-            "You share 3 hearts with your partner. One wrong click costs a life!",
-            "Use the live chat box to call out numbers you see on your board.",
-            "Take turns! Don't rush into guessing without double-checking.",
-            "On desktop, hit Enter to jump straight to chat, and Esc to return to the board!",
-            "Offline split-screen mode lets two players compete or co-op on a single screen.",
-            "Group numbers into low (10-40) and high (50-99) ranges to scan faster."
-        ];
-
-        function triggerHaptic(type) {
-            if (!navigator.vibrate) return;
-            if (type === 'tap') navigator.vibrate(12);
-            if (type === 'wrong') navigator.vibrate([30, 40, 30]);
-            if (type === 'win') navigator.vibrate([80, 50, 100, 50, 150]);
-        }
-
-        // Guidebook Modal functions
-        function openGuidebook() {
-            triggerHaptic('tap');
-            document.getElementById('guidebook-modal').classList.add('active');
-        }
-
-        function closeGuidebook() {
-            triggerHaptic('tap');
-            document.getElementById('guidebook-modal').classList.remove('active');
-        }
-
-        // 5-Second Loading Screen with Tip Cycling
-        function startLoadingSequence(onComplete) {
-            showScreen('loading-screen');
-            
-            const barFill = document.getElementById('loading-bar-fill');
-            const tipDisplay = document.getElementById('tip-display');
-            
-            barFill.style.width = '0%';
-            
-            // Pick random tip
-            let tipIdx = Math.floor(Math.random() * TIPS.length);
-            tipDisplay.textContent = TIPS[tipIdx];
-            
-            // Cycle tips halfway through
-            const tipTimer = setTimeout(() => {
-                tipIdx = (tipIdx + 1) % TIPS.length;
-                tipDisplay.style.opacity = '0';
-                setTimeout(() => {
-                    tipDisplay.textContent = TIPS[tipIdx];
-                    tipDisplay.style.opacity = '1';
-                }, 200);
-            }, 2500);
-
-            // Animate progress over ~5 seconds (4800ms)
-            let progress = 0;
-            const startTime = Date.now();
-            const duration = 4800;
-
-            const interval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                progress = Math.min(100, (elapsed / duration) * 100);
-                barFill.style.width = `${progress}%`;
-
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    clearTimeout(tipTimer);
-                    setTimeout(() => {
-                        onComplete();
-                    }, 300);
-                }
-            }, 50);
-        }
-
-        // Keyboard Shortcuts
-        window.addEventListener('keydown', (e) => {
-            const chatInput = document.getElementById('chat-input');
-            const gameScreen = document.getElementById('game-screen');
-
-            if (e.key === 'Escape') {
-                closeGuidebook();
-            }
-
-            if (!gameScreen.classList.contains('active')) return;
-
-            if (e.key === 'Enter' && document.activeElement !== chatInput) {
-                e.preventDefault();
-                chatInput.focus();
-            } else if (e.key === 'Escape' && document.activeElement === chatInput) {
-                chatInput.blur();
-            }
-        });
-
-        function getNickname() {
-            const input = document.getElementById('nickname-input').value.trim();
-            const name = input || "Player";
-            localStorage.setItem('samespot_nick', name);
-            return name;
-        }
-
+        // Initialization
         window.onload = () => {
-            const saved = localStorage.getItem('samespot_nick');
-            if(saved) document.getElementById('nickname-input').value = saved;
-            
-            const params = new URLSearchParams(window.location.search);
-            if (params.has('room')) {
-                let safeCode = params.get('room').replace(/[^a-zA-Z0-9]/g, '');
-                document.getElementById('room-input').value = safeCode.toUpperCase();
+            loadData();
+            if (myProfile.username) {
+                showHub();
+            } else {
+                showScreen('setup-screen');
             }
-        }
+        };
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function generateCode() {
-            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let res = '';
-            for(let i=0; i<4; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-            return res;
+        // --- Profile & Friends Logic ---
+
+        function loadData() {
+            const savedProfile = localStorage.getItem('samespot_profile');
+            if (savedProfile) {
+                myProfile = JSON.parse(savedProfile);
+            }
+            const savedFriends = localStorage.getItem('samespot_friends');
+            if (savedFriends) {
+                friendsList = JSON.parse(savedFriends);
+            }
         }
+
+        function saveData() {
+            localStorage.setItem('samespot_profile', JSON.stringify(myProfile));
+            localStorage.setItem('samespot_friends', JSON.stringify(friendsList));
+        }
+
+        function saveProfile() {
+            const dName = document.getElementById('setup-displayname').value.trim();
+            let uName = document.getElementById('setup-username').value.trim();
+            
+            if (!dName || !uName) { alert("Please fill out both fields."); return; }
+            if (!uName.startsWith('@')) uName = '@' + uName;
+            
+            uName = uName.replace(/\s+/g, ''); // no spaces in username
+            
+            myProfile = { displayName: dName, username: uName };
+            saveData();
+            showHub();
+        }
+
+        function editProfile() {
+            document.getElementById('setup-displayname').value = myProfile.displayName;
+            document.getElementById('setup-username').value = myProfile.username;
+            if(peer) { peer.destroy(); peer = null; }
+            showScreen('setup-screen');
+        }
+
+        function showHub() {
+            document.getElementById('hub-displayname').textContent = myProfile.displayName;
+            document.getElementById('hub-username').textContent = myProfile.username;
+            renderFriendsList();
+            showScreen('hub-screen');
+            initNetwork();
+        }
+
+        function addFriend() {
+            let tag = document.getElementById('add-friend-input').value.trim();
+            if (!tag) return;
+            if (!tag.startsWith('@')) tag = '@' + tag;
+            tag = tag.replace(/\s+/g, '');
+
+            if (tag.toLowerCase() === myProfile.username.toLowerCase()) {
+                alert("You can't add yourself!");
+                return;
+            }
+
+            if (!friendsList.includes(tag)) {
+                friendsList.push(tag);
+                saveData();
+                renderFriendsList();
+            }
+            document.getElementById('add-friend-input').value = '';
+        }
+
+        function removeFriend(tag) {
+            friendsList = friendsList.filter(f => f !== tag);
+            saveData();
+            renderFriendsList();
+        }
+
+        function renderFriendsList() {
+            const container = document.getElementById('friends-list-container');
+            container.innerHTML = '';
+            
+            if (friendsList.length === 0) {
+                container.innerHTML = '<div style="font-size:0.8rem; color:var(--text-dim); text-align:center; padding:10px;">No friends added yet.</div>';
+                return;
+            }
+
+            friendsList.forEach(fTag => {
+                const row = document.createElement('div');
+                row.className = 'friend-item';
+                row.innerHTML = `
+                    <div class="friend-item-info">
+                        <span class="friend-handle">${fTag}</span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button class="accent small-btn" onclick="inviteFriend('${fTag}')">Invite</button>
+                        <button class="secondary small-btn" onclick="removeFriend('${fTag}')">
+                            <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        // --- Network & PeerJS Logic ---
+
+        function getPeerId(username) {
+            // Strip @ and enforce lowercase for robust connection IDs
+            const clean = username.replace('@', '').toLowerCase();
+            return `samespot-user-${clean}`;
+        }
+
+        function initNetwork() {
+            if (peer) return;
+            
+            const myPeerId = getPeerId(myProfile.username);
+            peer = new Peer(myPeerId, {
+                debug: 0,
+                config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
+            });
+
+            peer.on('open', () => {
+                document.getElementById('hub-status-text').innerHTML = '<span class="online-dot active"></span> Online & Listening for invites';
+            });
+
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    alert("This username is currently logged in elsewhere.");
+                } else if (err.type === 'peer-unavailable') {
+                    alert("Player is offline or not found.");
+                }
+            });
+
+            // Listen for incoming connections (Invites)
+            peer.on('connection', (c) => {
+                if (c.metadata && c.metadata.type === 'INVITE') {
+                    incomingConn = c;
+                    partnerProfile = {
+                        displayName: c.metadata.fromDisplay,
+                        username: c.metadata.fromUser
+                    };
+                    showInviteModal();
+                    
+                    c.on('close', () => {
+                        hideInviteModal();
+                        incomingConn = null;
+                    });
+                }
+            });
+        }
+
+        // Send an invite to a friend
+        function inviteFriend(friendTag) {
+            if (!peer) return;
+            const friendId = getPeerId(friendTag);
+            
+            const btn = event.currentTarget;
+            const originalText = btn.textContent;
+            btn.textContent = "Calling...";
+            btn.disabled = true;
+
+            const tempConn = peer.connect(friendId, {
+                metadata: {
+                    type: 'INVITE',
+                    fromDisplay: myProfile.displayName,
+                    fromUser: myProfile.username
+                },
+                reliable: true
+            });
+
+            tempConn.on('open', () => {
+                btn.textContent = "Ringing...";
+            });
+
+            tempConn.on('data', (data) => {
+                if (data.type === 'ACCEPT') {
+                    isHost = true;
+                    conn = tempConn;
+                    partnerProfile = { displayName: 'Friend', username: friendTag };
+                    setupGameConnection();
+                    startNewMatch();
+                } else if (data.type === 'DECLINE') {
+                    alert(`${friendTag} declined the invite.`);
+                    tempConn.close();
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+
+            tempConn.on('close', () => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+            
+            // Timeout recovery
+            setTimeout(() => {
+                if(btn.disabled && (!conn || conn.peer !== friendId)) {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    tempConn.close();
+                }
+            }, 15000);
+        }
+
+        function showInviteModal() {
+            document.getElementById('invite-caller-text').textContent = `${partnerProfile.displayName} (${partnerProfile.username}) invited you to play!`;
+            document.getElementById('invite-modal').classList.add('active');
+        }
+
+        function hideInviteModal() {
+            document.getElementById('invite-modal').classList.remove('active');
+        }
+
+        function acceptInvite() {
+            if (incomingConn && incomingConn.open) {
+                incomingConn.send({ type: 'ACCEPT' });
+                conn = incomingConn;
+                isHost = false;
+                setupGameConnection();
+                hideInviteModal();
+                showScreen('game-screen');
+                document.getElementById('game-status').textContent = "Waiting for host to start match...";
+                document.getElementById('single-board').style.display = 'none';
+            }
+        }
+
+        function declineInvite() {
+            if (incomingConn && incomingConn.open) {
+                incomingConn.send({ type: 'DECLINE' });
+                setTimeout(() => { incomingConn.close(); incomingConn = null; }, 500);
+            }
+            hideInviteModal();
+        }
+
+        function setupGameConnection() {
+            conn.on('data', (data) => {
+                if (data.type === 'START_GAME') {
+                    myBoard = data.board;
+                    targetIndex = data.targetIndex;
+                    resetGameState();
+                    renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                    document.getElementById('single-board').style.display = 'grid';
+                    if(document.getElementById('chat-messages').children.length <= 1) {
+                        addSystemChat(`Connected to ${partnerProfile.displayName}.`);
+                    }
+                } 
+                else if (data.type === 'GUESS') {
+                    const el = document.getElementById('single-board').children[data.index];
+                    if (el) applyGuessResult(data.index, el, false);
+                } 
+                else if (data.type === 'CHAT') {
+                    addChatMessage(partnerProfile.displayName, data.message, false);
+                }
+            });
+
+            conn.on('close', () => {
+                alert("Partner disconnected.");
+                exitGame();
+            });
+        }
+
+        // --- Gameplay Logic ---
 
         function generateGameData() {
             const targetIdx = Math.floor(Math.random() * 20);
-            
             const pool = [];
             while(pool.length < 20) {
                 let r = Math.floor(Math.random() * 90) + 10;
                 if(!pool.includes(r)) pool.push(r);
             }
-            
             const targetNum = pool[0];
             const others = pool.slice(1); 
             
@@ -1041,317 +680,17 @@
                 p2Others = [...p1Others].sort(() => Math.random() - 0.5);
                 valid = true;
                 for(let i=0; i<19; i++) {
-                    if(p1Others[i] === p2Others[i]) {
-                        valid = false;
-                        break;
-                    }
+                    if(p1Others[i] === p2Others[i]) { valid = false; break; }
                 }
             }
             
-            let p1Board = new Array(20);
-            let p2Board = new Array(20);
+            let p1Board = new Array(20), p2Board = new Array(20);
             let oIdx = 0;
-            
             for(let i = 0; i < 20; i++) {
-                if(i === targetIdx) {
-                    p1Board[i] = targetNum;
-                    p2Board[i] = targetNum;
-                } else {
-                    p1Board[i] = p1Others[oIdx];
-                    p2Board[i] = p2Others[oIdx];
-                    oIdx++;
-                }
+                if(i === targetIdx) { p1Board[i] = p2Board[i] = targetNum; } 
+                else { p1Board[i] = p1Others[oIdx]; p2Board[i] = p2Others[oIdx]; oIdx++; }
             }
-            
             return { targetIndex: targetIdx, p1Board, p2Board };
-        }
-
-        function renderBoard(containerId, boardData, clickHandler) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            boardData.forEach((num, index) => {
-                const div = document.createElement('div');
-                div.className = 'circle';
-                div.textContent = num;
-                div.style.setProperty('--i', index);
-                div.onclick = () => {
-                    if (gameOver || div.classList.contains('disabled')) return;
-                    triggerHaptic('tap');
-                    clickHandler(index, div);
-                };
-                container.appendChild(div);
-            });
-        }
-
-        function resetGameState() {
-            lives = 3;
-            gameOver = false;
-            activeTurn = isLocalMode ? 1 : 'host';
-            document.getElementById('restart-btn').style.display = 'none';
-            document.getElementById('game-status').textContent = 'FIND THE 1 MATCHING SPOT';
-            updateTurnUI();
-            updateLivesUI();
-        }
-
-        function updateTurnUI() {
-            const banner = document.getElementById('turn-banner');
-            const singleBoard = document.getElementById('single-board');
-
-            if (isLocalMode) {
-                banner.textContent = `PLAYER ${activeTurn}'S TURN`;
-                banner.classList.add('my-turn');
-                
-                const p1Grid = document.getElementById('p1-grid');
-                const p2Grid = document.getElementById('p2-grid');
-
-                if (activeTurn === 1) {
-                    p1Grid.classList.remove('turn-disabled');
-                    p2Grid.classList.add('turn-disabled');
-                } else {
-                    p2Grid.classList.remove('turn-disabled');
-                    p1Grid.classList.add('turn-disabled');
-                }
-            } else {
-                const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
-                
-                if (isMyTurn) {
-                    banner.textContent = "YOUR TURN";
-                    banner.classList.add('my-turn');
-                    singleBoard.classList.remove('turn-disabled');
-                } else {
-                    banner.textContent = `${partnerNickname.toUpperCase()}'S TURN`;
-                    banner.classList.remove('my-turn');
-                    singleBoard.classList.add('turn-disabled');
-                }
-            }
-        }
-
-        function switchTurn() {
-            if (isLocalMode) {
-                activeTurn = activeTurn === 1 ? 2 : 1;
-            } else {
-                activeTurn = activeTurn === 'host' ? 'guest' : 'host';
-            }
-            updateTurnUI();
-        }
-
-        function updateLivesUI() {
-            const hearts = document.querySelectorAll('.heart-svg');
-            hearts.forEach((h, i) => {
-                if (i < lives) {
-                    h.classList.remove('lost');
-                } else {
-                    h.classList.add('lost');
-                }
-            });
-            if (lives <= 0 && !gameOver) {
-                gameOver = true;
-                handleLoss();
-            }
-        }
-
-        function handleGuess(index, el) {
-            const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
-            if (!isLocalMode && !isMyTurn) return;
-
-            applyGuessResult(index, el, true);
-            
-            if (conn && conn.open && !isLocalMode) {
-                conn.send({ type: 'GUESS', index: index });
-            }
-        }
-
-        function applyGuessResult(index, element, isMe) {
-            if (gameOver) return;
-
-            if (index === targetIndex) {
-                gameOver = true;
-                element.classList.add('correct');
-                triggerHaptic('win');
-                handleVictory(isMe);
-                
-                const siblings = element.parentElement.children;
-                for(let i=0; i<siblings.length; i++) {
-                    if(i !== index) siblings[i].classList.add('fade-out');
-                }
-            } else {
-                element.classList.add('wrong');
-                element.classList.add('disabled');
-                triggerHaptic('wrong');
-                
-                let message = "Wrong spot!";
-                if (!isLocalMode) {
-                    message = isMe ? "You tried a spot - Wrong!" : `${partnerNickname} tried a spot - Wrong!`;
-                }
-                document.getElementById('game-status').textContent = message;
-                
-                lives--;
-                updateLivesUI();
-                
-                if (!gameOver) {
-                    switchTurn();
-                }
-            }
-        }
-
-        function handleVictory(isMe) {
-            let msg = isLocalMode ? "MATCH FOUND! YOU WIN!" : (isMe ? "YOU FOUND THE MATCH!" : `${partnerNickname} FOUND IT!`);
-            document.getElementById('game-status').textContent = msg;
-            document.getElementById('turn-banner').textContent = "MATCH FOUND!";
-            document.getElementById('turn-banner').classList.add('my-turn');
-            
-            if(isHost || isLocalMode) {
-                setTimeout(() => {
-                    document.getElementById('restart-btn').style.display = 'block';
-                }, 800);
-            }
-        }
-
-        function handleLoss() {
-            document.getElementById('game-status').textContent = "OUT OF LIVES! GAME OVER.";
-            document.getElementById('turn-banner').textContent = "GAME OVER";
-            document.getElementById('turn-banner').classList.remove('my-turn');
-            
-            const grids = document.querySelectorAll('.board-grid');
-            grids.forEach(grid => {
-                if(grid.children[targetIndex]) {
-                    grid.children[targetIndex].classList.add('correct');
-                }
-            });
-            if(isHost || isLocalMode) {
-                setTimeout(() => {
-                    document.getElementById('restart-btn').style.display = 'block';
-                }, 800);
-            }
-        }
-
-        function restartGame() {
-            if (isLocalMode) {
-                startLocalMode();
-            } else if (isHost) {
-                startNewMatch();
-            }
-        }
-
-        function initPeer(id) {
-            const options = {
-                debug: 1,
-                config: {
-                    'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' }
-                    ]
-                }
-            };
-            return id ? new Peer(id, options) : new Peer(options);
-        }
-
-        function createRoom() {
-            myNickname = getNickname();
-            roomCode = generateCode();
-            isHost = true;
-            isLocalMode = false;
-            
-            document.getElementById('code-display').textContent = roomCode;
-            document.getElementById('waiting-status').textContent = "Connecting to server...";
-            showScreen('waiting-screen');
-
-            const fullId = 'samespot-room-' + roomCode;
-            peer = initPeer(fullId);
-
-            peer.on('open', (id) => {
-                document.getElementById('waiting-status').textContent = "Waiting for partner to join...";
-            });
-
-            peer.on('connection', (c) => {
-                if (conn) { c.close(); return; } 
-                conn = c;
-                setupConnection();
-            });
-
-            peer.on('error', handlePeerError);
-        }
-
-        function joinRoomInput() {
-            const code = document.getElementById('room-input').value.trim().toUpperCase();
-            if(code.length !== 4) { alert("Enter a 4-letter code"); return; }
-            joinRoom(code);
-        }
-
-        function joinRoom(code) {
-            myNickname = getNickname();
-            roomCode = code;
-            isHost = false;
-            isLocalMode = false;
-            
-            const fullId = 'samespot-room-' + code;
-            peer = initPeer();
-
-            peer.on('open', (id) => {
-                conn = peer.connect(fullId);
-                setupConnection();
-            });
-
-            peer.on('error', handlePeerError);
-        }
-
-        function handlePeerError(err) {
-            let msg = "Network error occurred.";
-            if (err.type === 'peer-unavailable') {
-                msg = "Room not found! Make sure your partner is actively waiting on the Lobby screen.";
-            } else {
-                msg = "Connection failed: " + err.type;
-            }
-            alert(msg);
-            exitToLobby();
-        }
-
-        function setupConnection() {
-            conn.on('open', () => {
-                if (!isHost) {
-                    conn.send({ type: 'READY_GUEST', nickname: myNickname });
-                }
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'READY_GUEST' && isHost) {
-                    partnerNickname = data.nickname || "Partner";
-                    addSystemChat(`${partnerNickname} joined.`);
-                    startNewMatch(); 
-                } 
-                else if (data.type === 'START_GAME') {
-                    partnerNickname = data.nickname || "Partner";
-                    myBoard = data.board;
-                    targetIndex = data.targetIndex;
-                    
-                    startLoadingSequence(() => {
-                        document.getElementById('single-board').style.display = 'grid';
-                        document.getElementById('split-board').style.display = 'none';
-                        document.getElementById('chat-box').style.display = 'flex';
-                        
-                        resetGameState();
-                        renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-                        showScreen('game-screen');
-                        
-                        if(document.getElementById('chat-messages').children.length <= 1) {
-                            addSystemChat(`Connected to ${partnerNickname}.`);
-                        }
-                    });
-                } 
-                else if (data.type === 'GUESS') {
-                    const el = document.getElementById('single-board').children[data.index];
-                    if (el) applyGuessResult(data.index, el, false);
-                } 
-                else if (data.type === 'CHAT') {
-                    addChatMessage(partnerNickname, data.message, false);
-                }
-            });
-
-            conn.on('close', () => {
-                alert("Partner disconnected.");
-                exitToLobby();
-            });
         }
 
         function startNewMatch() {
@@ -1363,88 +702,142 @@
                 conn.send({
                     type: 'START_GAME',
                     board: data.p2Board,
-                    targetIndex: data.targetIndex,
-                    nickname: myNickname
+                    targetIndex: data.targetIndex
                 });
             }
 
-            startLoadingSequence(() => {
-                document.getElementById('single-board').style.display = 'grid';
-                document.getElementById('split-board').style.display = 'none';
-                document.getElementById('chat-box').style.display = 'flex';
-                
-                resetGameState();
-                renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-                showScreen('game-screen');
+            resetGameState();
+            document.getElementById('single-board').style.display = 'grid';
+            renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+            showScreen('game-screen');
+        }
+
+        function hostRematch() {
+            if (isHost) startNewMatch();
+        }
+
+        function renderBoard(containerId, boardData, clickHandler) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            boardData.forEach((num, index) => {
+                const div = document.createElement('div');
+                div.className = 'circle';
+                div.textContent = num;
+                div.style.setProperty('--i', index);
+                div.onclick = () => {
+                    if (gameOver || div.classList.contains('disabled')) return;
+                    if (navigator.vibrate) navigator.vibrate(12);
+                    clickHandler(index, div);
+                };
+                container.appendChild(div);
             });
         }
 
-        function startLocalMode() {
-            isLocalMode = true;
-            isHost = true;
-            myNickname = "Player 1";
-            partnerNickname = "Player 2";
+        function resetGameState() {
+            lives = 3;
+            gameOver = false;
+            activeTurn = 'host';
+            document.getElementById('restart-btn').style.display = 'none';
+            document.getElementById('game-status').textContent = 'FIND THE 1 MATCHING SPOT';
+            updateTurnUI();
+            updateLivesUI();
+        }
+
+        function updateTurnUI() {
+            const banner = document.getElementById('turn-banner');
+            const singleBoard = document.getElementById('single-board');
+            const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
             
-            const data = generateGameData();
-            targetIndex = data.targetIndex;
-
-            startLoadingSequence(() => {
-                document.getElementById('single-board').style.display = 'none';
-                document.getElementById('chat-box').style.display = 'none';
-                document.getElementById('split-board').style.display = 'flex';
-                
-                resetGameState();
-                
-                renderBoard('p1-grid', data.p1Board, (idx, el) => {
-                    if (activeTurn !== 1) return;
-                    applyGuessResult(idx, el, true);
-                    if(!gameOver) {
-                        const p2El = document.getElementById('p2-grid').children[idx];
-                        p2El.classList.add('wrong', 'disabled');
-                    }
-                });
-                
-                renderBoard('p2-grid', data.p2Board, (idx, el) => {
-                    if (activeTurn !== 2) return;
-                    applyGuessResult(idx, el, false);
-                    if(!gameOver) {
-                        const p1El = document.getElementById('p1-grid').children[idx];
-                        p1El.classList.add('wrong', 'disabled');
-                    }
-                });
-
-                showScreen('game-screen');
-            });
+            if (isMyTurn) {
+                banner.textContent = "YOUR TURN";
+                banner.classList.add('my-turn');
+                singleBoard.classList.remove('turn-disabled');
+            } else {
+                banner.textContent = `${partnerProfile.displayName.toUpperCase()}'S TURN`;
+                banner.classList.remove('my-turn');
+                singleBoard.classList.add('turn-disabled');
+            }
         }
 
-        function exitToLobby() {
+        function updateLivesUI() {
+            document.querySelectorAll('.heart-svg').forEach((h, i) => {
+                if (i < lives) h.classList.remove('lost');
+                else h.classList.add('lost');
+            });
+            if (lives <= 0 && !gameOver) { gameOver = true; handleLoss(); }
+        }
+
+        function handleGuess(index, el) {
+            const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
+            if (!isMyTurn) return;
+
+            applyGuessResult(index, el, true);
+            if (conn && conn.open) conn.send({ type: 'GUESS', index: index });
+        }
+
+        function applyGuessResult(index, element, isMe) {
+            if (gameOver) return;
+
+            if (index === targetIndex) {
+                gameOver = true;
+                element.classList.add('correct');
+                if (navigator.vibrate) navigator.vibrate([80, 50, 100]);
+                handleVictory(isMe);
+                
+                const siblings = element.parentElement.children;
+                for(let i=0; i<siblings.length; i++) {
+                    if(i !== index) siblings[i].classList.add('fade-out');
+                }
+            } else {
+                element.classList.add('wrong', 'disabled');
+                if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+                
+                document.getElementById('game-status').textContent = isMe ? "Wrong spot!" : `${partnerProfile.displayName} missed!`;
+                
+                lives--;
+                updateLivesUI();
+                if (!gameOver) {
+                    activeTurn = activeTurn === 'host' ? 'guest' : 'host';
+                    updateTurnUI();
+                }
+            }
+        }
+
+        function handleVictory(isMe) {
+            document.getElementById('game-status').textContent = isMe ? "YOU FOUND THE MATCH!" : `${partnerProfile.displayName} FOUND IT!`;
+            document.getElementById('turn-banner').textContent = "MATCH FOUND!";
+            document.getElementById('turn-banner').classList.add('my-turn');
+            
+            if(isHost) setTimeout(() => { document.getElementById('restart-btn').style.display = 'block'; }, 800);
+        }
+
+        function handleLoss() {
+            document.getElementById('game-status').textContent = "OUT OF LIVES! GAME OVER.";
+            document.getElementById('turn-banner').textContent = "GAME OVER";
+            document.getElementById('turn-banner').classList.remove('my-turn');
+            
+            const grid = document.getElementById('single-board');
+            if(grid.children[targetIndex]) grid.children[targetIndex].classList.add('correct');
+            
+            if(isHost) setTimeout(() => { document.getElementById('restart-btn').style.display = 'block'; }, 800);
+        }
+
+        function exitGame() {
             if (conn) { conn.close(); conn = null; }
-            if (peer) { peer.destroy(); peer = null; }
-            
-            const url = new URL(window.location);
-            url.search = '';
-            window.history.replaceState({}, document.title, url);
-            
-            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>';
-            showScreen('lobby-screen');
+            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner.</div>';
+            renderFriendsList();
+            showScreen('hub-screen');
         }
 
-        function copyRoomLink() {
-            const url = window.location.origin + window.location.pathname + '?room=' + roomCode;
-            navigator.clipboard.writeText(url);
-            alert("Invite link copied!");
-        }
-
+        // --- Chat UI ---
         function sendChatMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
             const msg = input.value.trim();
             if(!msg) return;
             
-            addChatMessage(myNickname, msg, true);
-            if(conn && conn.open && !isLocalMode) {
-                conn.send({ type: 'CHAT', message: msg });
-            }
+            addChatMessage(myProfile.displayName, msg, true);
+            if(conn && conn.open) conn.send({ type: 'CHAT', message: msg });
             input.value = '';
         }
 

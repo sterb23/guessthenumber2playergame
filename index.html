@@ -16,6 +16,7 @@
             --text: #ffffff;
             --text-dim: #666666;
             --radius: 12px;
+            --green: #00ff66;
         }
 
         * {
@@ -256,16 +257,16 @@
             opacity: 0;
             animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             animation-delay: calc(var(--i) * 0.025s);
-            transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+            transition: transform 0.3s ease, border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, opacity 0.4s ease;
         }
 
-        .circle:hover:not(.disabled) {
+        .circle:hover:not(.disabled):not(.fade-out) {
             border-color: var(--border-bright);
             transform: scale(1.08);
             background: var(--surface-hover);
         }
 
-        .circle:active:not(.disabled) {
+        .circle:active:not(.disabled):not(.fade-out) {
             transform: scale(0.95);
         }
 
@@ -285,12 +286,23 @@
             animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
         }
 
+        /* Green Pulse Correct State */
         .circle.correct {
-            background: #ffffff;
-            border-color: #ffffff;
-            color: #000000;
+            background: var(--green) !important;
+            border-color: var(--green) !important;
+            color: #000000 !important;
             font-weight: 900;
-            animation: winPulse 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 1 !important;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.8);
+            animation: winPulse 0.9s infinite alternate ease-in-out !important;
+            z-index: 10;
+        }
+
+        /* Fade out non-target circles */
+        .circle.fade-out {
+            opacity: 0 !important;
+            transform: scale(0.4) !important;
+            pointer-events: none;
         }
 
         @keyframes shake {
@@ -301,9 +313,14 @@
         }
 
         @keyframes winPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1.08); }
+            from {
+                transform: scale(1);
+                box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
+            }
+            to {
+                transform: scale(1.18);
+                box-shadow: 0 0 30px rgba(0, 255, 102, 1);
+            }
         }
 
         /* Minimalist Chat Component */
@@ -566,7 +583,6 @@
                     renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
                     showScreen('game-screen');
                 } else if (data.type === 'GUESS') {
-                    // Sync partner's guess directly
                     const container = document.getElementById('single-board');
                     const circle = container.children[data.index];
                     if (circle) {
@@ -597,7 +613,6 @@
             isLocalMode = false;
             gameOver = false;
 
-            // Reset Chat & Screen States
             document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>';
             document.getElementById('chat-box').style.display = 'flex';
             document.getElementById('single-board').style.display = 'grid';
@@ -607,7 +622,6 @@
             showScreen('lobby-screen');
         }
 
-        // Chat functionality
         function sendChatMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
@@ -687,7 +701,6 @@
         function handleGuess(index, el) {
             if (gameOver || el.classList.contains('disabled')) return;
 
-            // Broadcast click to teammate in multiplayer
             if (!isLocalMode && conn && conn.open) {
                 conn.send({ type: 'GUESS', index: index });
             }
@@ -699,17 +712,14 @@
             if (gameOver || el.classList.contains('disabled')) return;
 
             if (index === targetIndex) {
-                el.classList.add('correct');
-                gameOver = true;
-                document.getElementById('game-status').innerText = isPartner ? "PARTNER FOUND IT! YOU WIN!" : "YOU FOUND IT! TEAM WINS!";
-                if (isHost || isLocalMode) document.getElementById('restart-btn').style.display = 'block';
+                handleVictory(index, isPartner);
             } else {
                 el.classList.add('wrong', 'disabled');
                 lives--;
                 updateHeartsUI();
 
                 if (isPartner) {
-                    appendChatMessage('System', `Partner tried circle #${index + 1} (${el.innerText}) - Wrong!`, false);
+                    appendChatMessage('System', `Partner tried spot #${index + 1} (${el.innerText}) - Wrong!`, false);
                 }
 
                 if (lives <= 0) {
@@ -721,12 +731,42 @@
             }
         }
 
+        function handleVictory(winningIndex, isPartner) {
+            gameOver = true;
+            document.getElementById('game-status').innerText = isPartner ? "PARTNER FOUND IT! YOU WIN!" : "YOU FOUND IT! TEAM WINS!";
+
+            const containers = isLocalMode 
+                ? [document.getElementById('p1-grid'), document.getElementById('p2-grid')]
+                : [document.getElementById('single-board')];
+
+            containers.forEach(container => {
+                const circles = container.getElementsByClassName('circle');
+                Array.from(circles).forEach((circle, i) => {
+                    if (i === winningIndex) {
+                        circle.classList.add('correct');
+                        circle.classList.remove('fade-out');
+                    } else {
+                        circle.classList.add('fade-out');
+                    }
+                });
+            });
+
+            if (isHost || isLocalMode) document.getElementById('restart-btn').style.display = 'block';
+        }
+
         function highlightTarget() {
-            const container = isLocalMode ? document.getElementById('p1-grid') : document.getElementById('single-board');
-            const circles = container.getElementsByClassName('circle');
-            if (circles[targetIndex]) {
-                circles[targetIndex].classList.add('correct');
-            }
+            const containers = isLocalMode 
+                ? [document.getElementById('p1-grid'), document.getElementById('p2-grid')]
+                : [document.getElementById('single-board')];
+
+            containers.forEach(container => {
+                const circles = container.getElementsByClassName('circle');
+                Array.from(circles).forEach((circle, i) => {
+                    if (i === targetIndex) {
+                        circle.classList.add('correct');
+                    }
+                });
+            });
         }
 
         function resetGameState() {

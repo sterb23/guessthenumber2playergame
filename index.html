@@ -524,7 +524,9 @@
             
             const params = new URLSearchParams(window.location.search);
             if (params.has('room')) {
-                document.getElementById('room-input').value = params.get('room');
+                // Strips out any accidental URL slashes or spaces
+                let safeCode = params.get('room').replace(/[^a-zA-Z0-9]/g, '');
+                document.getElementById('room-input').value = safeCode.toUpperCase();
             }
         }
 
@@ -540,13 +542,9 @@
             return res;
         }
 
-        // ==========================================
-        // GAME LOGIC: THE DERANGEMENT (Identical Pools)
-        // ==========================================
         function generateGameData() {
             const targetIdx = Math.floor(Math.random() * 20);
             
-            // 1. Pick exactly 20 unique random numbers for both players to share
             const pool = [];
             while(pool.length < 20) {
                 let r = Math.floor(Math.random() * 90) + 10;
@@ -554,14 +552,11 @@
             }
             
             const targetNum = pool[0];
-            const others = pool.slice(1); // The other 19 numbers
+            const others = pool.slice(1); 
             
-            // 2. Shuffle for Player 1
             let p1Others = [...others].sort(() => Math.random() - 0.5);
             let p2Others = [];
             
-            // 3. Create a perfect "Derangement" for Player 2. 
-            // This guarantees P2 has the EXACT same 19 numbers as P1, but NEVER in the same slot.
             let valid = false;
             while(!valid) {
                 p2Others = [...p1Others].sort(() => Math.random() - 0.5);
@@ -574,7 +569,6 @@
                 }
             }
             
-            // 4. Assemble boards
             let p1Board = new Array(20);
             let p2Board = new Array(20);
             let oIdx = 0;
@@ -593,9 +587,6 @@
             return { targetIndex: targetIdx, p1Board, p2Board };
         }
 
-        // ==========================================
-        // UI & RENDERING
-        // ==========================================
         function renderBoard(containerId, boardData, clickHandler) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -604,7 +595,6 @@
                 const div = document.createElement('div');
                 div.className = 'circle';
                 div.textContent = num;
-                // Add staggered animation delay inline
                 div.style.setProperty('--i', index);
                 div.onclick = () => {
                     if (gameOver || div.classList.contains('disabled')) return;
@@ -652,7 +642,6 @@
                 element.classList.add('correct');
                 handleVictory(isMe);
                 
-                // Fade out all other circles
                 const siblings = element.parentElement.children;
                 for(let i=0; i<siblings.length; i++) {
                     if(i !== index) siblings[i].classList.add('fade-out');
@@ -706,16 +695,19 @@
             }
         }
 
-        // ==========================================
-        // MULTIPLAYER NETWORKING (PeerJS)
-        // ==========================================
+        // --- NETWORK INITIALIZATION FIX ---
         function initPeer(id) {
-            return new Peer(id, {
+            const options = {
                 debug: 1,
-                config: {'iceServers': [
-                    { url: 'stun:stun.l.google.com:19302' }
-                ]}
-            });
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },    // Fixed from url to urls
+                        { urls: 'stun:stun1.l.google.com:19302' }   // Added fallback
+                    ]
+                }
+            };
+            // Prevent undefined ID errors on Guest join
+            return id ? new Peer(id, options) : new Peer(options);
         }
 
         function createRoom() {
@@ -736,15 +728,12 @@
             });
 
             peer.on('connection', (c) => {
-                if (conn) { c.close(); return; } // Only one partner allowed
+                if (conn) { c.close(); return; } 
                 conn = c;
                 setupConnection();
             });
 
-            peer.on('error', (err) => {
-                alert("Network error: " + err.type);
-                exitToLobby();
-            });
+            peer.on('error', handlePeerError);
         }
 
         function joinRoomInput() {
@@ -760,26 +749,32 @@
             isLocalMode = false;
             
             const fullId = 'samespot-room-' + code;
-            peer = initPeer();
+            peer = initPeer(); // Auto-generates clean ID for guest
 
             peer.on('open', (id) => {
-                conn = peer.connect(fullId, { reliable: true });
+                // Removed { reliable: true } which causes iOS/Safari cross-network bugs
+                conn = peer.connect(fullId);
                 setupConnection();
             });
 
-            peer.on('error', (err) => {
-                alert("Room not found or connection failed.");
-                exitToLobby();
-            });
+            peer.on('error', handlePeerError);
         }
 
-        // --- THE HANDSHAKE FIX ---
-        // Host waits for Guest to send 'READY_GUEST' before sending the board.
-        // This ensures the game pops up at the exact same moment for both players.
+        // Clearer Error feedback
+        function handlePeerError(err) {
+            let msg = "Network error occurred.";
+            if (err.type === 'peer-unavailable') {
+                msg = "Room not found! Make sure your partner is actively waiting on the Lobby screen.";
+            } else {
+                msg = "Connection failed: " + err.type;
+            }
+            alert(msg);
+            exitToLobby();
+        }
+
         function setupConnection() {
             conn.on('open', () => {
                 if (!isHost) {
-                    // Guest tells Host they are fully ready to receive data
                     conn.send({ type: 'READY_GUEST', nickname: myNickname });
                 }
             });
@@ -788,10 +783,9 @@
                 if (data.type === 'READY_GUEST' && isHost) {
                     partnerNickname = data.nickname || "Partner";
                     addSystemChat(`${partnerNickname} joined.`);
-                    startNewMatch(); // Host sends START_GAME now that Guest is ready
+                    startNewMatch(); 
                 } 
                 else if (data.type === 'START_GAME') {
-                    // Guest receives the board
                     partnerNickname = data.nickname || "Partner";
                     myBoard = data.board;
                     targetIndex = data.targetIndex;
@@ -846,9 +840,6 @@
             showScreen('game-screen');
         }
 
-        // ==========================================
-        // OFFLINE SPLIT-SCREEN
-        // ==========================================
         function startLocalMode() {
             isLocalMode = true;
             isHost = true;
@@ -883,14 +874,10 @@
             showScreen('game-screen');
         }
 
-        // ==========================================
-        // UTILS & CHAT
-        // ==========================================
         function exitToLobby() {
             if (conn) { conn.close(); conn = null; }
             if (peer) { peer.destroy(); peer = null; }
             
-            // Clean up UI params
             const url = new URL(window.location);
             url.search = '';
             window.history.replaceState({}, document.title, url);

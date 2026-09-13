@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAME SPOT</title>
+    <title>SAME SPOT - Co-Op</title>
     <!-- PeerJS for instant Room Multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
@@ -403,7 +403,7 @@
     <!-- LOBBY SCREEN -->
     <div id="lobby-screen" class="screen active">
         <h1>SAME SPOT</h1>
-        <div class="tagline">Ultra Minimalist Multiplayer</div>
+        <div class="tagline">Co-Op Number Finder</div>
 
         <div class="card">
             <button onclick="createRoom()">Create New Room</button>
@@ -420,14 +420,14 @@
     <!-- WAITING ROOM SCREEN -->
     <div id="waiting-screen" class="screen">
         <h1>ROOM CREATED</h1>
-        <div class="tagline">Share code with your opponent</div>
+        <div class="tagline">Share code with your teammate</div>
 
         <div class="card">
             <div class="room-code-badge" id="code-display">----</div>
             <button class="secondary" onclick="copyRoomLink()">Copy Invite Link</button>
         </div>
 
-        <div class="status-badge" id="waiting-status" style="margin-bottom: 20px;">Waiting for player 2...</div>
+        <div class="status-badge" id="waiting-status" style="margin-bottom: 20px;">Waiting for partner...</div>
         <button class="secondary" onclick="exitToLobby()">Exit to Lobby</button>
     </div>
 
@@ -439,7 +439,7 @@
                 <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             </div>
-            <div class="status-badge" id="game-status">FIND THE MATCH</div>
+            <div class="status-badge" id="game-status">FIND THE MATCH TOGETHER</div>
             <button class="text-only" onclick="exitToLobby()">✕ EXIT</button>
         </div>
 
@@ -463,7 +463,7 @@
         <!-- Live Chat Section -->
         <div id="chat-box" class="chat-card">
             <div class="chat-messages" id="chat-messages">
-                <div class="chat-msg"><span class="sender">System</span>Connected to room chat.</div>
+                <div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>
             </div>
             <form class="chat-form" onsubmit="sendChatMessage(event)">
                 <input type="text" id="chat-input" placeholder="Type message..." autocomplete="off">
@@ -506,10 +506,10 @@
             document.getElementById('code-display').innerText = roomCode;
             showScreen('waiting-screen');
 
-            peer = new Peer('samespot-v2-' + roomCode);
+            peer = new Peer('samespot-coop-' + roomCode);
 
             peer.on('open', () => {
-                document.getElementById('waiting-status').innerText = "Waiting for Player 2...";
+                document.getElementById('waiting-status').innerText = "Waiting for partner...";
             });
 
             peer.on('connection', (c) => {
@@ -543,7 +543,7 @@
             peer = new Peer();
 
             peer.on('open', () => {
-                conn = peer.connect('samespot-v2-' + code);
+                conn = peer.connect('samespot-coop-' + code);
                 setupConnection();
             });
 
@@ -563,20 +563,22 @@
                     myBoard = data.board;
                     targetIndex = data.targetIndex;
                     resetGameState();
-                    renderBoard('single-board', myBoard, handleGuess);
+                    renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
                     showScreen('game-screen');
-                } else if (data.type === 'WIN') {
-                    gameOver = true;
-                    document.getElementById('game-status').innerText = "OPPONENT FOUND IT FIRST!";
-                    highlightTarget();
-                    if (isHost) document.getElementById('restart-btn').style.display = 'block';
+                } else if (data.type === 'GUESS') {
+                    // Sync partner's guess directly
+                    const container = document.getElementById('single-board');
+                    const circle = container.children[data.index];
+                    if (circle) {
+                        applyGuessResult(data.index, circle, true);
+                    }
                 } else if (data.type === 'CHAT') {
-                    appendChatMessage('Opponent', data.text, false);
+                    appendChatMessage('Partner', data.text, false);
                 }
             });
 
             conn.on('close', () => {
-                appendChatMessage('System', 'Opponent disconnected.', false);
+                appendChatMessage('System', 'Partner disconnected.', false);
             });
         }
 
@@ -595,15 +597,13 @@
             isLocalMode = false;
             gameOver = false;
 
-            // Reset Chat
-            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to room chat.</div>';
+            // Reset Chat & Screen States
+            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>';
             document.getElementById('chat-box').style.display = 'flex';
             document.getElementById('single-board').style.display = 'grid';
             document.getElementById('split-board').style.display = 'none';
 
-            // Clean URL query params if joined via link
             window.history.replaceState({}, document.title, window.location.pathname);
-
             showScreen('lobby-screen');
         }
 
@@ -681,25 +681,40 @@
             });
 
             resetGameState();
-            renderBoard('single-board', myBoard, handleGuess);
+            renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
         }
 
         function handleGuess(index, el) {
             if (gameOver || el.classList.contains('disabled')) return;
 
+            // Broadcast click to teammate in multiplayer
+            if (!isLocalMode && conn && conn.open) {
+                conn.send({ type: 'GUESS', index: index });
+            }
+
+            applyGuessResult(index, el, false);
+        }
+
+        function applyGuessResult(index, el, isPartner) {
+            if (gameOver || el.classList.contains('disabled')) return;
+
             if (index === targetIndex) {
                 el.classList.add('correct');
                 gameOver = true;
-                document.getElementById('game-status').innerText = "YOU WON!";
-                document.getElementById('restart-btn').style.display = 'block';
-                if (!isLocalMode && conn) conn.send({ type: 'WIN' });
+                document.getElementById('game-status').innerText = isPartner ? "PARTNER FOUND IT! YOU WIN!" : "YOU FOUND IT! TEAM WINS!";
+                if (isHost || isLocalMode) document.getElementById('restart-btn').style.display = 'block';
             } else {
                 el.classList.add('wrong', 'disabled');
                 lives--;
                 updateHeartsUI();
+
+                if (isPartner) {
+                    appendChatMessage('System', `Partner tried circle #${index + 1} (${el.innerText}) - Wrong!`, false);
+                }
+
                 if (lives <= 0) {
                     gameOver = true;
-                    document.getElementById('game-status').innerText = "GAME OVER";
+                    document.getElementById('game-status').innerText = "OUT OF LIVES - GAME OVER";
                     highlightTarget();
                     if (isHost || isLocalMode) document.getElementById('restart-btn').style.display = 'block';
                 }
@@ -718,7 +733,7 @@
             lives = 3;
             gameOver = false;
             updateHeartsUI();
-            document.getElementById('game-status').innerText = "FIND THE MATCH";
+            document.getElementById('game-status').innerText = "FIND THE MATCH TOGETHER";
             document.getElementById('restart-btn').style.display = 'none';
         }
 

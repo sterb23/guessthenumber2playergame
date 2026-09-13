@@ -257,7 +257,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
                         The Core Objective
                     </h3>
-                    <p>You and your teammate each see a grid of 20 numbers. Out of all 20 numbers, <b>EXACTLY ONE</b> number exists on both of your boards at the same time!</p>
+                    <p>You and Alex each see a grid of 20 numbers. Out of all 20 numbers, <b>EXACTLY ONE</b> number exists on both of your boards at the exact same position!</p>
                 </div>
                 <div class="guide-section">
                     <h3>
@@ -265,17 +265,17 @@
                         Shared Lives & Turns
                     </h3>
                     <ul class="guide-bullet-list">
-                        <li>You and your partner share <b>3 Hearts</b>.</li>
-                        <li>Players take turns calling out or clicking a number.</li>
-                        <li><b>Wrong Guess:</b> Loses 1 Heart and turn goes to partner.</li>
+                        <li>You and Alex share <b>3 Hearts</b>.</li>
+                        <li>Players take turns clicking a number on their board.</li>
+                        <li><b>Wrong Guess:</b> Loses 1 Heart and turn goes to the other player.</li>
                     </ul>
                 </div>
                 <div class="guide-section">
                     <h3>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 z"/></svg>
                         Communication Strategy
                     </h3>
-                    <p>Group numbers into low/high ranges. Example: "I have lots of numbers in the 80s, do you?" Use the chat to narrow it down quickly!</p>
+                    <p>Talk to Alex in chat! Mention numbers, column/line positions, or give up if you're stuck to let him take the lead.</p>
                 </div>
                 <button style="margin-top: 8px;" onclick="closeGuidebook()">Got It!</button>
             </div>
@@ -397,16 +397,14 @@
         let isBotMode = false;
         let botBoard = [];
         const botName = "Alex (AI)";
-        let botPatience = 2;
         let botState = 'idle';
         let botClickedIndices = [];
 
         const TIPS = [
-            "Use chat to group numbers: 'I have lots of numbers in the 20s'.",
-            "Don't click immediately! Double check with your partner.",
+            "Take your time chatting with Alex to compare numbers and positions.",
+            "Both boards have 20 numbers, but EXACTLY ONE matches at the exact same spot.",
             "You only share 3 hearts. One wrong click costs a life!",
-            "Call out ranges first to quickly eliminate chunks of the board.",
-            "Both boards have 20 numbers, but EXACTLY ONE matches."
+            "If you get tired of searching, you can let Alex take over!"
         ];
 
         let userData = { username: "", wins: 0, winHistory: [], friends: [] };
@@ -518,7 +516,7 @@
         function resetGameState() {
             lives = 3; gameOver = false;
             botClickedIndices = []; botState = 'idle';
-            activeTurn = isBotMode ? 'host' : 'host';
+            activeTurn = 'host';
             document.getElementById('end-summary').classList.remove('active');
             document.getElementById('game-status').textContent = 'FIND THE 1 MATCHING SPOT';
             gameStartTime = Date.now();
@@ -680,7 +678,7 @@
 
         /* AI BOT LOGIC */
         function startBotMode() {
-            isBotMode = true; isHost = true; // Act as host to control turns
+            isBotMode = true; isHost = true;
             currentPartnerUsername = botName;
             const data = generateGameData();
             targetIndex = data.targetIndex; targetNum = data.targetNum; myBoard = data.p1Board; botBoard = data.p2Board;
@@ -690,78 +688,70 @@
                 renderBoard('single-board', myBoard, handleGuess);
                 showScreen('game-screen');
                 setTimeout(() => {
-                    addChatMessage(botName, "Hey! I'm Alex. Type some numbers you have on your board and let's find the match.", false);
+                    let col = (targetIndex % 5) + 1;
+                    let line = Math.floor(targetIndex / 5) + 1;
+                    addChatMessage(botName, "Hey! Take your time. Check your board and let me know what numbers you have. (Hint: look around column " + col + ", line " + line + "!)", false);
                 }, 1000);
             });
         }
 
         function botTakeTurn() {
             if (gameOver || activeTurn !== 'guest') return;
-            botState = 'thinking';
             
             setTimeout(() => {
+                if (gameOver || activeTurn !== 'guest') return;
                 let avail = [];
                 botBoard.forEach((num, idx) => { if (idx !== targetIndex && !botClickedIndices.includes(idx)) avail.push(num); });
                 avail.sort(() => Math.random() - 0.5);
-                let qNums = avail.slice(0, 2);
-                
-                addChatMessage(botName, `I'm looking at ${qNums.join(' and ')}. Do you have either?`, false);
-                botState = 'waiting_for_response';
-                botPatience = 2; // Resets patience
+                let sampleNum = avail[0];
+                let bIdx = botBoard.indexOf(sampleNum);
+                let col = (bIdx % 5) + 1;
+                let line = Math.floor(bIdx / 5) + 1;
 
-                setTimeout(() => {
-                    if (botState === 'waiting_for_response' && activeTurn === 'guest' && !gameOver) {
-                        addChatMessage(botName, `Taking too long, I'll just guess one of mine...`, false);
-                        let wIdx = botBoard.indexOf(qNums[0]);
-                        botClickedIndices.push(wIdx);
-                        setTimeout(() => applyGuessResult(wIdx, null, false, botBoard[wIdx]), 1000);
-                    }
-                }, 18000);
-            }, 1500);
+                addChatMessage(botName, `My turn! I'm checking number ${sampleNum} in column ${col}, line ${line}. Do you have that one?`, false);
+            }, 1200);
         }
 
         function processBotChat(msg) {
             if (gameOver) return;
-            botState = 'idle'; // Interrupted his waiting state
-            const nums = msg.match(/\b\d+\b/g) || [];
             const lower = msg.toLowerCase();
 
+            // Check if user gives up / hands it over
+            if (lower.includes("give it to you") || lower.includes("idk") || lower.includes("your turn") || lower.includes("you take")) {
+                addChatMessage(botName, "Alright, I'll take over and try to find the matching spot!", false);
+                setTimeout(() => {
+                    let wIdx = botBoard.findIndex((n, i) => i !== targetIndex && !botClickedIndices.includes(i));
+                    if (wIdx === -1) wIdx = targetIndex;
+                    botClickedIndices.push(wIdx);
+                    applyGuessResult(wIdx, null, false, botBoard[wIdx]);
+                }, 1500);
+                return;
+            }
+
+            const nums = msg.match(/\b\d+\b/g) || [];
             if (nums.length === 0) {
-                if (lower.match(/\b(no|nope|nah)\b/i)) {
-                    if (activeTurn === 'guest') {
-                        addChatMessage(botName, "Damn. Alright, I'll just risk one of mine then.", false);
-                        setTimeout(() => {
-                            let wIdx = botBoard.findIndex((n, i) => i !== targetIndex && !botClickedIndices.includes(i));
-                            botClickedIndices.push(wIdx);
-                            applyGuessResult(wIdx, null, false, botBoard[wIdx]);
-                        }, 1200);
-                    } else { addChatMessage(botName, "Alright, well keep looking.", false); }
-                } else {
-                    const snark = ["Just numbers please bro.", "Do we have a match or what?", "Type the actual numbers you see."];
-                    addChatMessage(botName, snark[Math.floor(Math.random()*snark.length)], false);
-                }
+                const replies = ["Take your time looking!", "Let me know what numbers you see on your board.", "Drop some numbers or tell me your columns/lines!"];
+                addChatMessage(botName, replies[Math.floor(Math.random() * replies.length)], false);
                 return;
             }
 
             let targetFound = nums.some(n => parseInt(n) === targetNum);
 
             if (targetFound) {
-                addChatMessage(botName, "YOOO! I actually have that! That's the spot!", false);
+                let col = (targetIndex % 5) + 1;
+                let line = Math.floor(targetIndex / 5) + 1;
+                addChatMessage(botName, `Wait, ${targetNum} is at column ${col}, line ${line} for me too! That's it!`, false);
                 if (activeTurn === 'guest') {
                     setTimeout(() => applyGuessResult(targetIndex, null, false, targetNum), 1500);
-                } else { addChatMessage(botName, "Click it on your board! It's your turn.", false); }
+                } else {
+                    addChatMessage(botName, "Click it on your board! It's your turn.", false);
+                }
             } else {
-                addChatMessage(botName, "Nope, don't have " + nums.join(' or ') + ".", false);
+                addChatMessage(botName, "Checked those, none of those match my spot. Keep looking or let me know if you want to hand it over!", false);
                 if (activeTurn === 'guest') {
-                    botPatience--;
-                    if (botPatience <= 0) {
-                        addChatMessage(botName, "This is taking too long, I'm risking a guess...", false);
-                        setTimeout(() => {
-                            let wIdx = botBoard.findIndex((n, i) => i !== targetIndex && !botClickedIndices.includes(i));
-                            botClickedIndices.push(wIdx);
-                            applyGuessResult(wIdx, null, false, botBoard[wIdx]);
-                        }, 1500);
-                    }
+                    setTimeout(() => {
+                        switchTurn();
+                    }, 1200);
                 }
             }
         }
@@ -798,3 +788,4 @@
     </script>
 </body>
 </html>
+

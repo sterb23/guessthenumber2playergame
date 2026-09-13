@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SAME SPOT - Co-Op</title>
-    <!-- PeerJS for instant Room & Friend Multiplayer -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --bg: #050505;
@@ -19,7 +17,6 @@
             --green: #00ff66;
             --yellow: #ffcc00;
             --red: #ff3333;
-            --glow: rgba(0, 255, 102, 0.15);
         }
 
         * {
@@ -41,7 +38,6 @@
             justify-content: center;
             padding: 16px;
             overflow-x: hidden;
-            touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
         }
@@ -223,7 +219,7 @@
             box-shadow: 0 0 40px rgba(0, 255, 102, 0.15);
         }
         
-        /* Game HUD & Board (from previous setup) */
+        /* Game HUD & Board */
         .hud { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; margin-bottom: 16px; }
         .hud-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .lives-container { display: flex; gap: 6px; align-items: center; background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
@@ -252,21 +248,20 @@
         .circle.disabled { cursor: default; }
 
         /* Chat */
-        .chat-card { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+        .chat-card { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
         .chat-messages { height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
         .chat-msg { font-size: 0.8rem; line-height: 1.3; }
         .chat-msg .sender { font-weight: 700; color: var(--text-dim); margin-right: 6px; font-size: 0.65rem; text-transform: uppercase; }
         .chat-msg.me .sender { color: var(--green); }
         .chat-form { display: flex; gap: 8px; }
         
-        /* Desktop specific */
         @media (min-width: 768px) {
             body { padding: 40px; }
             #game-screen { max-width: 860px; grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr auto; gap: 20px; align-items: start; }
             #game-screen.active { display: grid; }
             #game-screen .hud { grid-column: 1 / -1; }
             #single-board { grid-column: 1 / 2; }
-            #chat-box { grid-column: 2 / 3; height: 100%; justify-content: space-between; }
+            #chat-box { grid-column: 2 / 3; height: 100%; justify-content: space-between; margin-top: 0; }
             .chat-messages { height: 240px; }
             #restart-btn { grid-column: 1 / -1; }
         }
@@ -308,9 +303,7 @@
                 Friends List
             </h3>
             
-            <div id="friends-list-container">
-                <!-- Dynamically populated -->
-            </div>
+            <div id="friends-list-container"></div>
 
             <div class="divider">add new friend</div>
             <div class="add-friend-row">
@@ -320,7 +313,7 @@
         </div>
         
         <div class="status-badge" id="hub-status-text" style="margin-bottom: 16px;">
-            <span class="online-dot active"></span> Listening for invites...
+            <span class="online-dot active"></span> Network Active (Cross-Tab & Local Ready)
         </div>
     </div>
 
@@ -354,7 +347,7 @@
             </form>
         </div>
 
-        <button id="restart-btn" style="display: none;" onclick="hostRematch()">Play Again</button>
+        <button id="restart-btn" style="display: none; margin-top: 16px;" onclick="hostRematch()">Play Again</button>
     </div>
 
     <!-- INCOMING INVITE MODAL -->
@@ -375,9 +368,9 @@
         let myProfile = { displayName: '', username: '' };
         let friendsList = [];
         
-        let peer = null;
-        let conn = null; // Active game connection
-        let incomingConn = null; // Temporary connection for invite
+        let broadcastChannel = null;
+        let activeConnection = null; // Direct messaging channel wrapper
+        let pendingInviteData = null;
         
         let isHost = false;
         let partnerProfile = { displayName: 'Partner', username: '' };
@@ -389,7 +382,6 @@
         let gameOver = false;
         let activeTurn = 'host';
 
-        // Initialization
         window.onload = () => {
             loadData();
             if (myProfile.username) {
@@ -404,17 +396,11 @@
             document.getElementById(id).classList.add('active');
         }
 
-        // --- Profile & Friends Logic ---
-
         function loadData() {
             const savedProfile = localStorage.getItem('samespot_profile');
-            if (savedProfile) {
-                myProfile = JSON.parse(savedProfile);
-            }
+            if (savedProfile) myProfile = JSON.parse(savedProfile);
             const savedFriends = localStorage.getItem('samespot_friends');
-            if (savedFriends) {
-                friendsList = JSON.parse(savedFriends);
-            }
+            if (savedFriends) friendsList = JSON.parse(savedFriends);
         }
 
         function saveData() {
@@ -428,8 +414,7 @@
             
             if (!dName || !uName) { alert("Please fill out both fields."); return; }
             if (!uName.startsWith('@')) uName = '@' + uName;
-            
-            uName = uName.replace(/\s+/g, ''); // no spaces in username
+            uName = uName.replace(/\s+/g, '').toLowerCase();
             
             myProfile = { displayName: dName, username: uName };
             saveData();
@@ -439,7 +424,7 @@
         function editProfile() {
             document.getElementById('setup-displayname').value = myProfile.displayName;
             document.getElementById('setup-username').value = myProfile.username;
-            if(peer) { peer.destroy(); peer = null; }
+            if (broadcastChannel) broadcastChannel.close();
             showScreen('setup-screen');
         }
 
@@ -448,16 +433,16 @@
             document.getElementById('hub-username').textContent = myProfile.username;
             renderFriendsList();
             showScreen('hub-screen');
-            initNetwork();
+            initMessaging();
         }
 
         function addFriend() {
             let tag = document.getElementById('add-friend-input').value.trim();
             if (!tag) return;
             if (!tag.startsWith('@')) tag = '@' + tag;
-            tag = tag.replace(/\s+/g, '');
+            tag = tag.replace(/\s+/g, '').toLowerCase();
 
-            if (tag.toLowerCase() === myProfile.username.toLowerCase()) {
+            if (tag === myProfile.username.toLowerCase()) {
                 alert("You can't add yourself!");
                 return;
             }
@@ -503,108 +488,69 @@
             });
         }
 
-        // --- Network & PeerJS Logic ---
-
-        function getPeerId(username) {
-            // Strip @ and enforce lowercase for robust connection IDs
-            const clean = username.replace('@', '').toLowerCase();
-            return `samespot-user-${clean}`;
-        }
-
-        function initNetwork() {
-            if (peer) return;
+        // --- Reliable Local/Cross-Tab Bridge System ---
+        function initMessaging() {
+            if (broadcastChannel) broadcastChannel.close();
             
-            const myPeerId = getPeerId(myProfile.username);
-            peer = new Peer(myPeerId, {
-                debug: 0,
-                config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
-            });
+            broadcastChannel = new BroadcastChannel('samespot_network_channel');
+            broadcastChannel.onmessage = (event) => {
+                const data = event.data;
+                if (!data || !data.targetUser) return;
 
-            peer.on('open', () => {
-                document.getElementById('hub-status-text').innerHTML = '<span class="online-dot active"></span> Online & Listening for invites';
-            });
-
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    alert("This username is currently logged in elsewhere.");
-                } else if (err.type === 'peer-unavailable') {
-                    alert("Player is offline or not found.");
+                // Check if message is intended for this user
+                if (data.targetUser.toLowerCase() === myProfile.username.toLowerCase()) {
+                    if (data.type === 'INVITE') {
+                        pendingInviteData = data;
+                        partnerProfile = { displayName: data.fromDisplay, username: data.fromUser };
+                        showInviteModal();
+                    } else if (data.type === 'ACCEPT') {
+                        if (window.pendingInviteBtn) {
+                            window.pendingInviteBtn.textContent = "Joined!";
+                        }
+                        isHost = true;
+                        partnerProfile = { displayName: data.fromDisplay, username: data.fromUser };
+                        setupDirectConnection(data.fromUser);
+                        startNewMatch();
+                    } else if (data.type === 'DECLINE') {
+                        if (window.pendingInviteBtn) {
+                            window.pendingInviteBtn.textContent = "Declined";
+                            setTimeout(() => {
+                                window.pendingInviteBtn.textContent = "Invite";
+                                window.pendingInviteBtn.disabled = false;
+                            }, 2000);
+                        }
+                        alert(`${data.fromUser} declined your invite.`);
+                    } else if (activeConnection && data.type === 'GAME_MSG') {
+                        handleIncomingGameMessage(data.payload);
+                    }
                 }
-            });
-
-            // Listen for incoming connections (Invites)
-            peer.on('connection', (c) => {
-                if (c.metadata && c.metadata.type === 'INVITE') {
-                    incomingConn = c;
-                    partnerProfile = {
-                        displayName: c.metadata.fromDisplay,
-                        username: c.metadata.fromUser
-                    };
-                    showInviteModal();
-                    
-                    c.on('close', () => {
-                        hideInviteModal();
-                        incomingConn = null;
-                    });
-                }
-            });
+            };
         }
 
-        // Send an invite to a friend
         function inviteFriend(friendTag) {
-            if (!peer) return;
-            const friendId = getPeerId(friendTag);
-            
             const btn = event.currentTarget;
-            const originalText = btn.textContent;
+            window.pendingInviteBtn = btn;
             btn.textContent = "Calling...";
             btn.disabled = true;
 
-            const tempConn = peer.connect(friendId, {
-                metadata: {
-                    type: 'INVITE',
-                    fromDisplay: myProfile.displayName,
-                    fromUser: myProfile.username
-                },
-                reliable: true
+            broadcastChannel.postMessage({
+                targetUser: friendTag,
+                type: 'INVITE',
+                fromUser: myProfile.username,
+                fromDisplay: myProfile.displayName
             });
 
-            tempConn.on('open', () => {
-                btn.textContent = "Ringing...";
-            });
-
-            tempConn.on('data', (data) => {
-                if (data.type === 'ACCEPT') {
-                    isHost = true;
-                    conn = tempConn;
-                    partnerProfile = { displayName: 'Friend', username: friendTag };
-                    setupGameConnection();
-                    startNewMatch();
-                } else if (data.type === 'DECLINE') {
-                    alert(`${friendTag} declined the invite.`);
-                    tempConn.close();
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }
-            });
-
-            tempConn.on('close', () => {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            });
-            
-            // Timeout recovery
             setTimeout(() => {
-                if(btn.disabled && (!conn || conn.peer !== friendId)) {
-                    btn.textContent = originalText;
+                if (btn.disabled && btn.textContent === "Calling...") {
+                    btn.textContent = "Invite";
                     btn.disabled = false;
-                    tempConn.close();
+                    alert("No response from player (make sure they have the app open in another tab or window!).");
                 }
-            }, 15000);
+            }, 10000);
         }
 
         function showInviteModal() {
-            document.getElementById('invite-caller-text').textContent = `${partnerProfile.displayName} (${partnerProfile.username}) invited you to play!`;
+            document.getElementById('invite-caller-text').textContent = `${partnerProfile.displayName} (${partnerProfile.username}) wants to play!`;
             document.getElementById('invite-modal').classList.add('active');
         }
 
@@ -613,51 +559,63 @@
         }
 
         function acceptInvite() {
-            if (incomingConn && incomingConn.open) {
-                incomingConn.send({ type: 'ACCEPT' });
-                conn = incomingConn;
-                isHost = false;
-                setupGameConnection();
-                hideInviteModal();
-                showScreen('game-screen');
-                document.getElementById('game-status').textContent = "Waiting for host to start match...";
-                document.getElementById('single-board').style.display = 'none';
-            }
+            broadcastChannel.postMessage({
+                targetUser: partnerProfile.username,
+                type: 'ACCEPT',
+                fromUser: myProfile.username,
+                fromDisplay: myProfile.displayName
+            });
+
+            isHost = false;
+            setupDirectConnection(partnerProfile.username);
+            hideInviteModal();
+            showScreen('game-screen');
+            document.getElementById('game-status').textContent = "Waiting for host to start match...";
+            document.getElementById('single-board').style.display = 'none';
         }
 
         function declineInvite() {
-            if (incomingConn && incomingConn.open) {
-                incomingConn.send({ type: 'DECLINE' });
-                setTimeout(() => { incomingConn.close(); incomingConn = null; }, 500);
+            if (pendingInviteData) {
+                broadcastChannel.postMessage({
+                    targetUser: pendingInviteData.fromUser,
+                    type: 'DECLINE',
+                    fromUser: myProfile.username
+                });
             }
             hideInviteModal();
         }
 
-        function setupGameConnection() {
-            conn.on('data', (data) => {
-                if (data.type === 'START_GAME') {
-                    myBoard = data.board;
-                    targetIndex = data.targetIndex;
-                    resetGameState();
-                    renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-                    document.getElementById('single-board').style.display = 'grid';
-                    if(document.getElementById('chat-messages').children.length <= 1) {
-                        addSystemChat(`Connected to ${partnerProfile.displayName}.`);
-                    }
-                } 
-                else if (data.type === 'GUESS') {
-                    const el = document.getElementById('single-board').children[data.index];
-                    if (el) applyGuessResult(data.index, el, false);
-                } 
-                else if (data.type === 'CHAT') {
-                    addChatMessage(partnerProfile.displayName, data.message, false);
+        function setupDirectConnection(partnerUser) {
+            activeConnection = {
+                partner: partnerUser,
+                send: (payload) => {
+                    broadcastChannel.postMessage({
+                        targetUser: partnerUser,
+                        type: 'GAME_MSG',
+                        payload: payload
+                    });
                 }
-            });
+            };
+        }
 
-            conn.on('close', () => {
-                alert("Partner disconnected.");
-                exitGame();
-            });
+        function handleIncomingGameMessage(data) {
+            if (data.type === 'START_GAME') {
+                myBoard = data.board;
+                targetIndex = data.targetIndex;
+                resetGameState();
+                renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                document.getElementById('single-board').style.display = 'grid';
+                if (document.getElementById('chat-messages').children.length <= 1) {
+                    addSystemChat(`Connected to ${partnerProfile.displayName}.`);
+                }
+            } 
+            else if (data.type === 'GUESS') {
+                const el = document.getElementById('single-board').children[data.index];
+                if (el) applyGuessResult(data.index, el, false);
+            } 
+            else if (data.type === 'CHAT') {
+                addChatMessage(partnerProfile.displayName, data.message, false);
+            }
         }
 
         // --- Gameplay Logic ---
@@ -698,8 +656,8 @@
             targetIndex = data.targetIndex;
             myBoard = data.p1Board;
 
-            if (conn && conn.open) {
-                conn.send({
+            if (activeConnection) {
+                activeConnection.send({
                     type: 'START_GAME',
                     board: data.p2Board,
                     targetIndex: data.targetIndex
@@ -772,7 +730,7 @@
             if (!isMyTurn) return;
 
             applyGuessResult(index, el, true);
-            if (conn && conn.open) conn.send({ type: 'GUESS', index: index });
+            if (activeConnection) activeConnection.send({ type: 'GUESS', index: index });
         }
 
         function applyGuessResult(index, element, isMe) {
@@ -823,13 +781,12 @@
         }
 
         function exitGame() {
-            if (conn) { conn.close(); conn = null; }
+            activeConnection = null;
             document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner.</div>';
             renderFriendsList();
             showScreen('hub-screen');
         }
 
-        // --- Chat UI ---
         function sendChatMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
@@ -837,7 +794,7 @@
             if(!msg) return;
             
             addChatMessage(myProfile.displayName, msg, true);
-            if(conn && conn.open) conn.send({ type: 'CHAT', message: msg });
+            if(activeConnection) activeConnection.send({ type: 'CHAT', message: msg });
             input.value = '';
         }
 

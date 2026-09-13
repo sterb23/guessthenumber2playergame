@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SAME SPOT - Co-Op</title>
+    <!-- PeerJS for instant Room Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --bg: #050505;
@@ -17,6 +19,7 @@
             --green: #00ff66;
             --yellow: #ffcc00;
             --red: #ff3333;
+            --glow: rgba(0, 255, 102, 0.15);
         }
 
         * {
@@ -38,6 +41,7 @@
             justify-content: center;
             padding: 16px;
             overflow-x: hidden;
+            touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
         }
@@ -91,7 +95,7 @@
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 0.15em;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
             text-align: center;
             font-weight: 600;
         }
@@ -129,6 +133,13 @@
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
         }
 
+        input.code-input {
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
         button {
             background: var(--text);
             color: var(--bg);
@@ -148,172 +159,558 @@
             gap: 8px;
         }
 
-        button:hover { background: #e6e6e6; transform: translateY(-1px); }
-        button:active { transform: scale(0.97); }
+        button:hover {
+            background: #e6e6e6;
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: scale(0.97);
+        }
 
         button.secondary {
             background: transparent;
             color: var(--text);
             border-color: var(--border);
         }
-        button.secondary:hover { border-color: var(--border-bright); background: var(--surface-hover); }
 
-        button.accent { background: transparent; color: var(--green); border-color: var(--green); }
-        button.accent:hover { background: rgba(0, 255, 102, 0.1); }
-        
-        button.text-only { background: transparent; border: none; color: var(--text-dim); font-size: 0.75rem; letter-spacing: 0.08em; padding: 8px; width: auto; }
-        button.text-only:hover { color: var(--text); transform: none; }
+        button.secondary:hover {
+            border-color: var(--border-bright);
+            background: var(--surface-hover);
+        }
 
-        button.small-btn { padding: 8px 12px; font-size: 0.7rem; width: auto; border-radius: 8px; }
+        button.accent {
+            background: transparent;
+            color: var(--green);
+            border-color: var(--green);
+        }
 
-        .icon-svg { width: 16px; height: 16px; stroke-width: 2.2; flex-shrink: 0; }
+        button.accent:hover {
+            background: rgba(0, 255, 102, 0.1);
+        }
+
+        button.text-only {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            padding: 8px;
+            width: auto;
+        }
+
+        button.text-only:hover {
+            color: var(--text);
+            background: transparent;
+            transform: none;
+        }
+
+        .icon-svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 2.2;
+            flex-shrink: 0;
+        }
 
         .divider {
-            display: flex; align-items: center; color: var(--text-dim); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin: 4px 0;
-        }
-        .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); margin: 0 12px; }
-
-        /* Profile & Friends UI */
-        .profile-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            color: var(--text-dim);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin: 4px 0;
+        }
+
+        .divider::before, .divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+            margin: 0 12px;
+        }
+
+        .room-code-badge {
+            background: var(--bg);
+            border: 1px dashed var(--border-bright);
             padding: 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: 0.25em;
+            user-select: all;
+            color: var(--green);
+            text-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
+        }
+
+        /* Profile & Friends Box */
+        .profile-bar {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            margin-bottom: 16px;
+            padding: 14px 18px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .profile-handle {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--green);
+        }
+
+        .profile-stats {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tab-group {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .tab-btn {
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 8px;
+        }
+
+        .tab-btn.active {
+            background: var(--text);
+            color: var(--bg);
+            border-color: var(--text);
+        }
+
+        .friends-list, .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 140px;
+            overflow-y: auto;
             width: 100%;
         }
 
-        .profile-info { display: flex; flex-direction: column; }
-        .profile-name { font-size: 1.1rem; font-weight: 800; color: var(--text); }
-        .profile-user { font-size: 0.8rem; font-weight: 600; color: var(--green); letter-spacing: 0.05em; margin-top: 2px;}
-
-        .friend-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px;
+        .list-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
-        .friend-item-info { display: flex; flex-direction: column; }
-        .friend-handle { font-size: 0.9rem; font-weight: 700; color: var(--text); }
-        
-        .add-friend-row { display: flex; gap: 8px; margin-top: 8px; }
 
-        .online-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); display: inline-block; margin-right: 6px;
+        .list-item-sub {
+            font-size: 0.7rem;
+            color: var(--text-dim);
         }
-        .online-dot.active { background: var(--green); box-shadow: 0 0 8px rgba(0, 255, 102, 0.6); }
 
-        /* Modal Overlays */
+        /* Loading Screen Components */
+        .loading-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+
+        .spinner-ring {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00b347 0%, var(--green) 100%);
+            border-radius: 10px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 12px rgba(0, 255, 102, 0.5);
+        }
+
+        /* Modal Overlay */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(5, 5, 5, 0.88); backdrop-filter: blur(8px);
-            z-index: 100; display: none; align-items: center; justify-content: center; padding: 16px;
-            animation: fadeIn 0.2s ease;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 5, 5, 0.88);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .modal-overlay.active { display: flex; }
 
-        .invite-modal {
-            background: var(--surface); border: 1px solid var(--green); border-radius: var(--radius);
-            padding: 24px; width: 100%; max-width: 320px; text-align: center;
-            box-shadow: 0 0 40px rgba(0, 255, 102, 0.15);
+        .modal-overlay.active {
+            display: flex;
         }
-        
-        /* Game HUD & Board */
-        .hud { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; margin-bottom: 16px; }
-        .hud-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        .lives-container { display: flex; gap: 6px; align-items: center; background: var(--surface); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); }
-        .heart-svg { width: 20px; height: 20px; fill: var(--text); transition: all 0.4s ease; }
-        .heart-svg.lost { fill: transparent; stroke: var(--border); stroke-width: 2; transform: scale(0.75); opacity: 0.3; }
-        
-        .turn-banner { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; padding: 6px 16px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--yellow); }
-        .turn-banner.my-turn { color: var(--bg); background: var(--green); border-color: var(--green); }
-        .status-badge { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase; }
 
-        .board-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; transition: opacity 0.3s ease; }
-        .board-grid.turn-disabled { opacity: 0.35; pointer-events: none; }
-        
+        .modal-card {
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 440px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        /* HUD & Gameplay Elements */
+        .hud {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .lives-container {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            background: var(--surface);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .heart-svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--text);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .heart-svg.lost {
+            fill: transparent;
+            stroke: var(--border);
+            stroke-width: 2;
+            transform: scale(0.75);
+            opacity: 0.3;
+        }
+
+        .turn-banner {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 6px 16px;
+            border-radius: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--yellow);
+            transition: all 0.3s ease;
+        }
+
+        .turn-banner.my-turn {
+            color: var(--bg);
+            background: var(--green);
+            border-color: var(--green);
+            box-shadow: 0 0 16px rgba(0, 255, 102, 0.4);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            width: 100%;
+            transition: opacity 0.3s ease;
+        }
+
+        .board-grid.turn-disabled {
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
         .circle {
-            aspect-ratio: 1; border-radius: 50%; background: var(--surface); border: 1px solid var(--border);
-            color: var(--text); font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; opacity: 0; animation: popIn 0.4s forwards; animation-delay: calc(var(--i) * 0.015s);
-            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 1.1rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            opacity: 0;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation-delay: calc(var(--i) * 0.015s);
+            transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
         }
-        @keyframes popIn { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
-        
-        .circle:active:not(.disabled) { transform: scale(0.92); }
-        .circle.wrong { background: #2a0808; border-color: var(--red); color: var(--red); }
-        .circle.correct { background: var(--green) !important; border-color: var(--green) !important; color: #000 !important; opacity: 1 !important; box-shadow: 0 0 25px rgba(0, 255, 102, 0.9); z-index: 10; transform: scale(1.15); }
-        .circle.fade-out { opacity: 0 !important; transform: scale(0.3) !important; pointer-events: none; }
+
         .circle.disabled { cursor: default; }
 
-        /* Chat */
-        .chat-card { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-        .chat-messages { height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-        .chat-msg { font-size: 0.8rem; line-height: 1.3; }
-        .chat-msg .sender { font-weight: 700; color: var(--text-dim); margin-right: 6px; font-size: 0.65rem; text-transform: uppercase; }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.3); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .circle.wrong {
+            background: #2a0808;
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .circle.correct {
+            background: var(--green) !important;
+            border-color: var(--green) !important;
+            color: #000000 !important;
+            font-weight: 900;
+            box-shadow: 0 0 25px rgba(0, 255, 102, 0.9);
+            z-index: 10;
+        }
+
+        .circle.fade-out {
+            opacity: 0 !important;
+            transform: scale(0.3) !important;
+            pointer-events: none;
+        }
+
+        /* End Game Summary Card */
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            border-radius: var(--radius);
+            padding: 20px;
+            width: 100%;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            text-align: center;
+            margin-top: 14px;
+        }
+
+        .summary-card.active {
+            display: flex;
+        }
+
+        .summary-stat {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--green);
+        }
+
+        /* Chat Component */
+        .chat-card {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .chat-messages {
+            height: 85px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-msg {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+
+        .chat-msg .sender {
+            font-weight: 700;
+            color: var(--text-dim);
+            margin-right: 6px;
+            font-size: 0.65rem;
+        }
+
         .chat-msg.me .sender { color: var(--green); }
-        .chat-form { display: flex; gap: 8px; }
-        
-        @media (min-width: 768px) {
-            body { padding: 40px; }
-            #game-screen { max-width: 860px; grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr auto; gap: 20px; align-items: start; }
-            #game-screen.active { display: grid; }
-            #game-screen .hud { grid-column: 1 / -1; }
-            #single-board { grid-column: 1 / 2; }
-            #chat-box { grid-column: 2 / 3; height: 100%; justify-content: space-between; margin-top: 0; }
-            .chat-messages { height: 240px; }
-            #restart-btn { grid-column: 1 / -1; }
+
+        .chat-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chat-form button { width: auto; padding: 10px 16px; }
+
+        /* Local Split View */
+        .split-container {
+            display: none;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .split-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .split-title {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-weight: 800;
         }
     </style>
 </head>
 <body>
 
-    <!-- INITIAL SETUP SCREEN -->
-    <div id="setup-screen" class="screen">
-        <h1>WELCOME</h1>
-        <div class="tagline">Create your profile to join the network</div>
-
-        <div class="card">
-            <label style="font-size: 0.75rem; color: var(--text-dim); margin-left: 4px; font-weight: 700;">DISPLAY NAME</label>
-            <input type="text" id="setup-displayname" placeholder="How others see you" maxlength="16" autocomplete="off">
+    <!-- USERNAME SETUP MODAL -->
+    <div id="username-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2 style="font-weight: 900; letter-spacing: -0.03em;">CHOOSE @USERNAME</h2>
+            <p style="font-size: 0.82rem; color: var(--text-dim);">Pick a unique handle to play online and connect with friends.</p>
             
-            <label style="font-size: 0.75rem; color: var(--text-dim); margin-left: 4px; margin-top: 8px; font-weight: 700;">USERNAME</label>
-            <input type="text" id="setup-username" placeholder="@TTVsteph2K" maxlength="15" autocomplete="off">
+            <input type="text" id="username-input" placeholder="@username" maxlength="16" autocomplete="off">
+            <div id="username-error" style="font-size: 0.75rem; color: var(--red); display: none;">Handle already taken or invalid.</div>
             
-            <button style="margin-top: 12px;" onclick="saveProfile()">Continue</button>
+            <button onclick="saveUsername()">Save Handle</button>
         </div>
     </div>
 
-    <!-- MAIN HUB (FRIENDS & LOBBY) -->
-    <div id="hub-screen" class="screen">
-        <div class="profile-header">
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen" class="screen active">
+        <h1>SAME SPOT</h1>
+        <div class="tagline">Co-Op Number Finder</div>
+
+        <!-- Profile Bar -->
+        <div class="profile-bar">
             <div class="profile-info">
-                <div class="profile-name" id="hub-displayname">Player</div>
-                <div class="profile-user" id="hub-username">@player</div>
+                <div class="profile-handle" id="user-display-handle">@player</div>
+                <div class="profile-stats" id="user-display-stats">0 Wins</div>
             </div>
-            <button class="text-only" onclick="editProfile()">
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
+            <button class="secondary" style="width: auto; padding: 6px 12px; font-size: 0.7rem;" onclick="openUsernameModal()">Edit</button>
         </div>
 
         <div class="card">
-            <h3 style="font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                Friends List
-            </h3>
-            
-            <div id="friends-list-container"></div>
+            <button onclick="createRoom()">Create New Room</button>
+            <div class="divider">or enter code</div>
+            <input type="text" id="room-input" class="code-input" placeholder="CODE" maxlength="4" autocomplete="off">
+            <button class="secondary" onclick="joinRoomInput()">Join Room</button>
+        </div>
 
-            <div class="divider">add new friend</div>
-            <div class="add-friend-row">
-                <input type="text" id="add-friend-input" placeholder="@playersname" style="flex: 1;" autocomplete="off">
-                <button class="secondary" style="width: auto;" onclick="addFriend()">Add</button>
+        <!-- Friends & History Box -->
+        <div class="card" style="padding: 14px;">
+            <div class="tab-group">
+                <button class="tab-btn active" id="tab-friends" onclick="switchSocialTab('friends')">Friends</button>
+                <button class="tab-btn" id="tab-history" onclick="switchSocialTab('history')">Win History</button>
+            </div>
+
+            <!-- Friends View -->
+            <div id="view-friends">
+                <div class="friends-list" id="friends-container"></div>
+                <div style="display: flex; gap: 6px; margin-top: 10px;">
+                    <input type="text" id="add-friend-input" placeholder="@username" style="padding: 8px 12px; font-size: 0.8rem;">
+                    <button class="secondary" style="width: auto; padding: 8px 14px; font-size: 0.75rem;" onclick="addFriendFromInput()">Add</button>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div id="view-history" style="display: none;">
+                <div class="history-list" id="history-container"></div>
             </div>
         </div>
-        
-        <div class="status-badge" id="hub-status-text" style="margin-bottom: 16px;">
-            <span class="online-dot active"></span> Network Active (Cross-Tab & Local Ready)
+
+        <button class="secondary" onclick="startLocalMode()">Offline Split-Screen</button>
+    </div>
+
+    <!-- WAITING ROOM SCREEN -->
+    <div id="waiting-screen" class="screen">
+        <h1>ROOM CREATED</h1>
+        <div class="tagline">Share code with your partner</div>
+
+        <div class="card">
+            <div class="room-code-badge" id="code-display">----</div>
+            <button class="secondary" onclick="copyRoomLink()">Copy Invite Link</button>
+        </div>
+
+        <div class="status-badge" id="waiting-status" style="margin-bottom: 20px;">Waiting for partner...</div>
+        <button class="secondary" onclick="exitToLobby()">Exit to Lobby</button>
+    </div>
+
+    <!-- LOADING SCREEN -->
+    <div id="loading-screen" class="screen">
+        <h1 style="font-size: 1.8rem; margin-bottom: 2px;">MATCH LOADING</h1>
+        <div class="tagline">Preparing board matrices...</div>
+
+        <div class="loading-card">
+            <div class="spinner-ring"></div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="loading-bar-fill"></div>
+            </div>
         </div>
     </div>
 
@@ -327,298 +724,219 @@
                     <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </div>
                 <div id="turn-banner" class="turn-banner">YOUR TURN</div>
-                <button class="text-only" onclick="exitGame()">
-                    <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    LEAVE
-                </button>
+                <button class="text-only" onclick="exitToLobby()">EXIT</button>
             </div>
             <div class="status-badge" id="game-status">FIND THE 1 MATCHING SPOT</div>
         </div>
 
         <div id="single-board" class="board-grid"></div>
 
+        <div id="split-board" class="split-container">
+            <div class="split-column">
+                <div class="split-title" id="p1-title">Player 1</div>
+                <div id="p1-grid" class="board-grid"></div>
+            </div>
+            <div class="split-column">
+                <div class="split-title" id="p2-title">Player 2</div>
+                <div id="p2-grid" class="board-grid"></div>
+            </div>
+        </div>
+
+        <!-- End Game Summary -->
+        <div id="end-summary" class="summary-card">
+            <div style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800;">Time Elapsed</div>
+            <div id="summary-time" class="summary-stat">0.0s</div>
+            <div id="summary-partner" style="font-size: 0.85rem; font-weight: 700;">Played with @partner</div>
+            
+            <button id="add-partner-btn" class="secondary" style="font-size: 0.75rem; padding: 10px;" onclick="addCurrentPartnerFriend()">Add Partner as Friend</button>
+            <button id="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+
         <div id="chat-box" class="chat-card">
             <div class="chat-messages" id="chat-messages">
-                <div class="chat-msg"><span class="sender">System</span>Connected to partner.</div>
+                <div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>
             </div>
             <form class="chat-form" onsubmit="sendChatMessage(event)">
                 <input type="text" id="chat-input" placeholder="Type message..." autocomplete="off">
                 <button type="submit" class="secondary">Send</button>
             </form>
         </div>
-
-        <button id="restart-btn" style="display: none; margin-top: 16px;" onclick="hostRematch()">Play Again</button>
-    </div>
-
-    <!-- INCOMING INVITE MODAL -->
-    <div id="invite-modal" class="modal-overlay">
-        <div class="invite-modal">
-            <svg class="icon-svg" style="width: 32px; height: 32px; color: var(--green); margin-bottom: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            <h2 style="font-size: 1.2rem; margin-bottom: 4px;">Game Invite</h2>
-            <p style="font-size: 0.9rem; color: var(--text-dim); margin-bottom: 24px;" id="invite-caller-text">@player wants to play!</p>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="secondary" onclick="declineInvite()">Decline</button>
-                <button class="accent" onclick="acceptInvite()">Accept</button>
-            </div>
-        </div>
     </div>
 
     <script>
-        let myProfile = { displayName: '', username: '' };
-        let friendsList = [];
-        
-        let broadcastChannel = null;
-        let activeConnection = null; // Direct messaging channel wrapper
-        let pendingInviteData = null;
-        
+        let peer = null;
+        let conn = null;
+        let roomCode = "";
         let isHost = false;
-        let partnerProfile = { displayName: 'Partner', username: '' };
-        
-        // Gameplay State
         let myBoard = [];
         let targetIndex = -1;
         let lives = 3;
         let gameOver = false;
+        let isLocalMode = false;
         let activeTurn = 'host';
 
+        let gameStartTime = 0;
+        let elapsedSeconds = "0.0";
+
+        // User Data Store
+        let userData = {
+            username: "",
+            wins: 0,
+            winHistory: [],
+            friends: []
+        };
+
+        let currentPartnerUsername = "";
+
+        // App Initialization
         window.onload = () => {
-            loadData();
-            if (myProfile.username) {
-                showHub();
+            loadUserData();
+            if (!userData.username) {
+                openUsernameModal();
             } else {
-                showScreen('setup-screen');
+                updateProfileUI();
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('room')) {
+                let safeCode = params.get('room').replace(/[^a-zA-Z0-9]/g, '');
+                document.getElementById('room-input').value = safeCode.toUpperCase();
             }
         };
+
+        function loadUserData() {
+            const saved = localStorage.getItem('samespot_user_data');
+            if (saved) {
+                try { userData = JSON.parse(saved); } catch(e){}
+            }
+            if (!userData.friends) userData.friends = [];
+            if (!userData.winHistory) userData.winHistory = [];
+        }
+
+        function saveUserData() {
+            localStorage.setItem('samespot_user_data', JSON.stringify(userData));
+            updateProfileUI();
+        }
+
+        function updateProfileUI() {
+            document.getElementById('user-display-handle').textContent = userData.username || "@player";
+            document.getElementById('user-display-stats').textContent = `${userData.wins} Win${userData.wins === 1 ? '' : 's'}`;
+            renderFriendsList();
+            renderHistoryList();
+        }
+
+        function formatHandle(input) {
+            let handle = input.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+            return handle ? '@' + handle : '';
+        }
+
+        function openUsernameModal() {
+            document.getElementById('username-input').value = userData.username;
+            document.getElementById('username-error').style.display = 'none';
+            document.getElementById('username-modal').classList.add('active');
+        }
+
+        function saveUsername() {
+            const raw = document.getElementById('username-input').value;
+            const formatted = formatHandle(raw);
+            const err = document.getElementById('username-error');
+
+            if (formatted.length < 3) {
+                err.textContent = "Handle must be at least 3 characters.";
+                err.style.display = 'block';
+                return;
+            }
+
+            // PeerJS validation check for uniqueness on signaling server
+            const testPeer = new Peer('samespot-usr-' + formatted.replace('@', ''));
+            
+            testPeer.on('open', () => {
+                testPeer.destroy();
+                userData.username = formatted;
+                saveUserData();
+                document.getElementById('username-modal').classList.remove('active');
+            });
+
+            testPeer.on('error', (e) => {
+                if (e.type === 'unavailable-id') {
+                    err.textContent = "Handle already taken on another device!";
+                    err.style.display = 'block';
+                } else {
+                    // If network glitch, permit if changed locally
+                    userData.username = formatted;
+                    saveUserData();
+                    document.getElementById('username-modal').classList.remove('active');
+                }
+            });
+        }
+
+        function switchSocialTab(tab) {
+            document.getElementById('tab-friends').classList.toggle('active', tab === 'friends');
+            document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+            document.getElementById('view-friends').style.display = tab === 'friends' ? 'block' : 'none';
+            document.getElementById('view-history').style.display = tab === 'history' ? 'block' : 'none';
+        }
+
+        function renderFriendsList() {
+            const container = document.getElementById('friends-container');
+            container.innerHTML = '';
+            if (userData.friends.length === 0) {
+                container.innerHTML = '<div class="list-item-sub" style="text-align:center; padding:10px;">No friends added yet</div>';
+                return;
+            }
+            userData.friends.forEach(f => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `<span>${f}</span><span class="list-item-sub">Friend</span>`;
+                container.appendChild(item);
+            });
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            if (userData.winHistory.length === 0) {
+                container.innerHTML = '<div class="list-item-sub" style="text-align:center; padding:10px;">No match victories recorded</div>';
+                return;
+            }
+            userData.winHistory.slice(-5).reverse().forEach(h => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `<span>With ${h.partner}</span><span class="list-item-sub">${h.time}</span>`;
+                container.appendChild(item);
+            });
+        }
+
+        function addFriendFromInput() {
+            const input = document.getElementById('add-friend-input');
+            const handle = formatHandle(input.value);
+            if (handle && handle !== userData.username && !userData.friends.includes(handle)) {
+                userData.friends.push(handle);
+                saveUserData();
+                input.value = '';
+            }
+        }
+
+        function addCurrentPartnerFriend() {
+            if (currentPartnerUsername && currentPartnerUsername !== userData.username && !userData.friends.includes(currentPartnerUsername)) {
+                userData.friends.push(currentPartnerUsername);
+                saveUserData();
+                document.getElementById('add-partner-btn').textContent = "Added to Friends!";
+                document.getElementById('add-partner-btn').disabled = true;
+            }
+        }
 
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
         }
 
-        function loadData() {
-            const savedProfile = localStorage.getItem('samespot_profile');
-            if (savedProfile) myProfile = JSON.parse(savedProfile);
-            const savedFriends = localStorage.getItem('samespot_friends');
-            if (savedFriends) friendsList = JSON.parse(savedFriends);
+        function generateCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let res = '';
+            for(let i=0; i<4; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
         }
-
-        function saveData() {
-            localStorage.setItem('samespot_profile', JSON.stringify(myProfile));
-            localStorage.setItem('samespot_friends', JSON.stringify(friendsList));
-        }
-
-        function saveProfile() {
-            const dName = document.getElementById('setup-displayname').value.trim();
-            let uName = document.getElementById('setup-username').value.trim();
-            
-            if (!dName || !uName) { alert("Please fill out both fields."); return; }
-            if (!uName.startsWith('@')) uName = '@' + uName;
-            uName = uName.replace(/\s+/g, '').toLowerCase();
-            
-            myProfile = { displayName: dName, username: uName };
-            saveData();
-            showHub();
-        }
-
-        function editProfile() {
-            document.getElementById('setup-displayname').value = myProfile.displayName;
-            document.getElementById('setup-username').value = myProfile.username;
-            if (broadcastChannel) broadcastChannel.close();
-            showScreen('setup-screen');
-        }
-
-        function showHub() {
-            document.getElementById('hub-displayname').textContent = myProfile.displayName;
-            document.getElementById('hub-username').textContent = myProfile.username;
-            renderFriendsList();
-            showScreen('hub-screen');
-            initMessaging();
-        }
-
-        function addFriend() {
-            let tag = document.getElementById('add-friend-input').value.trim();
-            if (!tag) return;
-            if (!tag.startsWith('@')) tag = '@' + tag;
-            tag = tag.replace(/\s+/g, '').toLowerCase();
-
-            if (tag === myProfile.username.toLowerCase()) {
-                alert("You can't add yourself!");
-                return;
-            }
-
-            if (!friendsList.includes(tag)) {
-                friendsList.push(tag);
-                saveData();
-                renderFriendsList();
-            }
-            document.getElementById('add-friend-input').value = '';
-        }
-
-        function removeFriend(tag) {
-            friendsList = friendsList.filter(f => f !== tag);
-            saveData();
-            renderFriendsList();
-        }
-
-        function renderFriendsList() {
-            const container = document.getElementById('friends-list-container');
-            container.innerHTML = '';
-            
-            if (friendsList.length === 0) {
-                container.innerHTML = '<div style="font-size:0.8rem; color:var(--text-dim); text-align:center; padding:10px;">No friends added yet.</div>';
-                return;
-            }
-
-            friendsList.forEach(fTag => {
-                const row = document.createElement('div');
-                row.className = 'friend-item';
-                row.innerHTML = `
-                    <div class="friend-item-info">
-                        <span class="friend-handle">${fTag}</span>
-                    </div>
-                    <div style="display:flex; gap:6px;">
-                        <button class="accent small-btn" onclick="inviteFriend('${fTag}')">Invite</button>
-                        <button class="secondary small-btn" onclick="removeFriend('${fTag}')">
-                            <svg class="icon-svg" style="width:14px; height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(row);
-            });
-        }
-
-        // --- Reliable Local/Cross-Tab Bridge System ---
-        function initMessaging() {
-            if (broadcastChannel) broadcastChannel.close();
-            
-            broadcastChannel = new BroadcastChannel('samespot_network_channel');
-            broadcastChannel.onmessage = (event) => {
-                const data = event.data;
-                if (!data || !data.targetUser) return;
-
-                // Check if message is intended for this user
-                if (data.targetUser.toLowerCase() === myProfile.username.toLowerCase()) {
-                    if (data.type === 'INVITE') {
-                        pendingInviteData = data;
-                        partnerProfile = { displayName: data.fromDisplay, username: data.fromUser };
-                        showInviteModal();
-                    } else if (data.type === 'ACCEPT') {
-                        if (window.pendingInviteBtn) {
-                            window.pendingInviteBtn.textContent = "Joined!";
-                        }
-                        isHost = true;
-                        partnerProfile = { displayName: data.fromDisplay, username: data.fromUser };
-                        setupDirectConnection(data.fromUser);
-                        startNewMatch();
-                    } else if (data.type === 'DECLINE') {
-                        if (window.pendingInviteBtn) {
-                            window.pendingInviteBtn.textContent = "Declined";
-                            setTimeout(() => {
-                                window.pendingInviteBtn.textContent = "Invite";
-                                window.pendingInviteBtn.disabled = false;
-                            }, 2000);
-                        }
-                        alert(`${data.fromUser} declined your invite.`);
-                    } else if (activeConnection && data.type === 'GAME_MSG') {
-                        handleIncomingGameMessage(data.payload);
-                    }
-                }
-            };
-        }
-
-        function inviteFriend(friendTag) {
-            const btn = event.currentTarget;
-            window.pendingInviteBtn = btn;
-            btn.textContent = "Calling...";
-            btn.disabled = true;
-
-            broadcastChannel.postMessage({
-                targetUser: friendTag,
-                type: 'INVITE',
-                fromUser: myProfile.username,
-                fromDisplay: myProfile.displayName
-            });
-
-            setTimeout(() => {
-                if (btn.disabled && btn.textContent === "Calling...") {
-                    btn.textContent = "Invite";
-                    btn.disabled = false;
-                    alert("No response from player (make sure they have the app open in another tab or window!).");
-                }
-            }, 10000);
-        }
-
-        function showInviteModal() {
-            document.getElementById('invite-caller-text').textContent = `${partnerProfile.displayName} (${partnerProfile.username}) wants to play!`;
-            document.getElementById('invite-modal').classList.add('active');
-        }
-
-        function hideInviteModal() {
-            document.getElementById('invite-modal').classList.remove('active');
-        }
-
-        function acceptInvite() {
-            broadcastChannel.postMessage({
-                targetUser: partnerProfile.username,
-                type: 'ACCEPT',
-                fromUser: myProfile.username,
-                fromDisplay: myProfile.displayName
-            });
-
-            isHost = false;
-            setupDirectConnection(partnerProfile.username);
-            hideInviteModal();
-            showScreen('game-screen');
-            document.getElementById('game-status').textContent = "Waiting for host to start match...";
-            document.getElementById('single-board').style.display = 'none';
-        }
-
-        function declineInvite() {
-            if (pendingInviteData) {
-                broadcastChannel.postMessage({
-                    targetUser: pendingInviteData.fromUser,
-                    type: 'DECLINE',
-                    fromUser: myProfile.username
-                });
-            }
-            hideInviteModal();
-        }
-
-        function setupDirectConnection(partnerUser) {
-            activeConnection = {
-                partner: partnerUser,
-                send: (payload) => {
-                    broadcastChannel.postMessage({
-                        targetUser: partnerUser,
-                        type: 'GAME_MSG',
-                        payload: payload
-                    });
-                }
-            };
-        }
-
-        function handleIncomingGameMessage(data) {
-            if (data.type === 'START_GAME') {
-                myBoard = data.board;
-                targetIndex = data.targetIndex;
-                resetGameState();
-                renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-                document.getElementById('single-board').style.display = 'grid';
-                if (document.getElementById('chat-messages').children.length <= 1) {
-                    addSystemChat(`Connected to ${partnerProfile.displayName}.`);
-                }
-            } 
-            else if (data.type === 'GUESS') {
-                const el = document.getElementById('single-board').children[data.index];
-                if (el) applyGuessResult(data.index, el, false);
-            } 
-            else if (data.type === 'CHAT') {
-                addChatMessage(partnerProfile.displayName, data.message, false);
-            }
-        }
-
-        // --- Gameplay Logic ---
 
         function generateGameData() {
             const targetIdx = Math.floor(Math.random() * 20);
@@ -632,8 +950,8 @@
             
             let p1Others = [...others].sort(() => Math.random() - 0.5);
             let p2Others = [];
-            
             let valid = false;
+
             while(!valid) {
                 p2Others = [...p1Others].sort(() => Math.random() - 0.5);
                 valid = true;
@@ -642,41 +960,27 @@
                 }
             }
             
-            let p1Board = new Array(20), p2Board = new Array(20);
+            let p1Board = new Array(20);
+            let p2Board = new Array(20);
             let oIdx = 0;
+            
             for(let i = 0; i < 20; i++) {
-                if(i === targetIdx) { p1Board[i] = p2Board[i] = targetNum; } 
-                else { p1Board[i] = p1Others[oIdx]; p2Board[i] = p2Others[oIdx]; oIdx++; }
+                if(i === targetIdx) {
+                    p1Board[i] = targetNum;
+                    p2Board[i] = targetNum;
+                } else {
+                    p1Board[i] = p1Others[oIdx];
+                    p2Board[i] = p2Others[oIdx];
+                    oIdx++;
+                }
             }
             return { targetIndex: targetIdx, p1Board, p2Board };
-        }
-
-        function startNewMatch() {
-            const data = generateGameData();
-            targetIndex = data.targetIndex;
-            myBoard = data.p1Board;
-
-            if (activeConnection) {
-                activeConnection.send({
-                    type: 'START_GAME',
-                    board: data.p2Board,
-                    targetIndex: data.targetIndex
-                });
-            }
-
-            resetGameState();
-            document.getElementById('single-board').style.display = 'grid';
-            renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-            showScreen('game-screen');
-        }
-
-        function hostRematch() {
-            if (isHost) startNewMatch();
         }
 
         function renderBoard(containerId, boardData, clickHandler) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
+            
             boardData.forEach((num, index) => {
                 const div = document.createElement('div');
                 div.className = 'circle';
@@ -684,7 +988,6 @@
                 div.style.setProperty('--i', index);
                 div.onclick = () => {
                     if (gameOver || div.classList.contains('disabled')) return;
-                    if (navigator.vibrate) navigator.vibrate(12);
                     clickHandler(index, div);
                 };
                 container.appendChild(div);
@@ -694,9 +997,10 @@
         function resetGameState() {
             lives = 3;
             gameOver = false;
-            activeTurn = 'host';
-            document.getElementById('restart-btn').style.display = 'none';
+            activeTurn = isLocalMode ? 1 : 'host';
+            document.getElementById('end-summary').classList.remove('active');
             document.getElementById('game-status').textContent = 'FIND THE 1 MATCHING SPOT';
+            gameStartTime = Date.now();
             updateTurnUI();
             updateLivesUI();
         }
@@ -704,33 +1008,60 @@
         function updateTurnUI() {
             const banner = document.getElementById('turn-banner');
             const singleBoard = document.getElementById('single-board');
-            const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
-            
-            if (isMyTurn) {
-                banner.textContent = "YOUR TURN";
+
+            if (isLocalMode) {
+                banner.textContent = `PLAYER ${activeTurn}'S TURN`;
                 banner.classList.add('my-turn');
-                singleBoard.classList.remove('turn-disabled');
+                
+                const p1Grid = document.getElementById('p1-grid');
+                const p2Grid = document.getElementById('p2-grid');
+
+                if (activeTurn === 1) {
+                    p1Grid.classList.remove('turn-disabled');
+                    p2Grid.classList.add('turn-disabled');
+                } else {
+                    p2Grid.classList.remove('turn-disabled');
+                    p1Grid.classList.add('turn-disabled');
+                }
             } else {
-                banner.textContent = `${partnerProfile.displayName.toUpperCase()}'S TURN`;
-                banner.classList.remove('my-turn');
-                singleBoard.classList.add('turn-disabled');
+                const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
+                if (isMyTurn) {
+                    banner.textContent = "YOUR TURN";
+                    banner.classList.add('my-turn');
+                    singleBoard.classList.remove('turn-disabled');
+                } else {
+                    banner.textContent = `${currentPartnerUsername.toUpperCase()}'S TURN`;
+                    banner.classList.remove('my-turn');
+                    singleBoard.classList.add('turn-disabled');
+                }
             }
         }
 
+        function switchTurn() {
+            activeTurn = isLocalMode ? (activeTurn === 1 ? 2 : 1) : (activeTurn === 'host' ? 'guest' : 'host');
+            updateTurnUI();
+        }
+
         function updateLivesUI() {
-            document.querySelectorAll('.heart-svg').forEach((h, i) => {
+            const hearts = document.querySelectorAll('.heart-svg');
+            hearts.forEach((h, i) => {
                 if (i < lives) h.classList.remove('lost');
                 else h.classList.add('lost');
             });
-            if (lives <= 0 && !gameOver) { gameOver = true; handleLoss(); }
+            if (lives <= 0 && !gameOver) {
+                gameOver = true;
+                handleLoss();
+            }
         }
 
         function handleGuess(index, el) {
             const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
-            if (!isMyTurn) return;
+            if (!isLocalMode && !isMyTurn) return;
 
             applyGuessResult(index, el, true);
-            if (activeConnection) activeConnection.send({ type: 'GUESS', index: index });
+            if (conn && conn.open && !isLocalMode) {
+                conn.send({ type: 'GUESS', index: index });
+            }
         }
 
         function applyGuessResult(index, element, isMe) {
@@ -739,52 +1070,214 @@
             if (index === targetIndex) {
                 gameOver = true;
                 element.classList.add('correct');
-                if (navigator.vibrate) navigator.vibrate([80, 50, 100]);
+                elapsedSeconds = ((Date.now() - gameStartTime) / 1000).toFixed(1) + 's';
                 handleVictory(isMe);
-                
-                const siblings = element.parentElement.children;
-                for(let i=0; i<siblings.length; i++) {
-                    if(i !== index) siblings[i].classList.add('fade-out');
-                }
             } else {
-                element.classList.add('wrong', 'disabled');
-                if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+                element.classList.add('wrong');
+                element.classList.add('disabled');
                 
-                document.getElementById('game-status').textContent = isMe ? "Wrong spot!" : `${partnerProfile.displayName} missed!`;
+                let message = isLocalMode ? "Wrong spot!" : (isMe ? "You tried a spot - Wrong!" : `${currentPartnerUsername} tried a spot - Wrong!`);
+                document.getElementById('game-status').textContent = message;
                 
                 lives--;
                 updateLivesUI();
-                if (!gameOver) {
-                    activeTurn = activeTurn === 'host' ? 'guest' : 'host';
-                    updateTurnUI();
-                }
+                if (!gameOver) switchTurn();
             }
         }
 
         function handleVictory(isMe) {
-            document.getElementById('game-status').textContent = isMe ? "YOU FOUND THE MATCH!" : `${partnerProfile.displayName} FOUND IT!`;
-            document.getElementById('turn-banner').textContent = "MATCH FOUND!";
+            document.getElementById('game-status').textContent = "MATCH FOUND!";
+            document.getElementById('turn-banner').textContent = "VICTORY!";
             document.getElementById('turn-banner').classList.add('my-turn');
+
+            // Record Win Data
+            userData.wins++;
+            userData.winHistory.push({
+                partner: currentPartnerUsername || "Offline Partner",
+                time: elapsedSeconds
+            });
+            saveUserData();
+
+            // Setup summary card
+            document.getElementById('summary-time').textContent = elapsedSeconds;
+            document.getElementById('summary-partner').textContent = `Played with ${currentPartnerUsername || 'Offline Partner'}`;
             
-            if(isHost) setTimeout(() => { document.getElementById('restart-btn').style.display = 'block'; }, 800);
+            const addBtn = document.getElementById('add-partner-btn');
+            if (isLocalMode || !currentPartnerUsername || userData.friends.includes(currentPartnerUsername)) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = 'block';
+                addBtn.textContent = 'Add Partner as Friend';
+                addBtn.disabled = false;
+            }
+
+            document.getElementById('end-summary').classList.add('active');
         }
 
         function handleLoss() {
             document.getElementById('game-status').textContent = "OUT OF LIVES! GAME OVER.";
             document.getElementById('turn-banner').textContent = "GAME OVER";
             document.getElementById('turn-banner').classList.remove('my-turn');
-            
-            const grid = document.getElementById('single-board');
-            if(grid.children[targetIndex]) grid.children[targetIndex].classList.add('correct');
-            
-            if(isHost) setTimeout(() => { document.getElementById('restart-btn').style.display = 'block'; }, 800);
+            document.getElementById('end-summary').classList.add('active');
+            document.getElementById('add-partner-btn').style.display = 'none';
         }
 
-        function exitGame() {
-            activeConnection = null;
-            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner.</div>';
-            renderFriendsList();
-            showScreen('hub-screen');
+        function restartGame() {
+            if (isLocalMode) startLocalMode();
+            else if (isHost) startNewMatch();
+        }
+
+        function initPeer(id) {
+            return id ? new Peer(id) : new Peer();
+        }
+
+        function createRoom() {
+            if (!userData.username) { openUsernameModal(); return; }
+            roomCode = generateCode();
+            isHost = true;
+            isLocalMode = false;
+            
+            document.getElementById('code-display').textContent = roomCode;
+            document.getElementById('waiting-status').textContent = "Connecting to server...";
+            showScreen('waiting-screen');
+
+            peer = initPeer('samespot-room-' + roomCode);
+            peer.on('open', () => {
+                document.getElementById('waiting-status').textContent = "Waiting for partner to join...";
+            });
+            peer.on('connection', (c) => {
+                if (conn) { c.close(); return; } 
+                conn = c;
+                setupConnection();
+            });
+        }
+
+        function joinRoomInput() {
+            if (!userData.username) { openUsernameModal(); return; }
+            const code = document.getElementById('room-input').value.trim().toUpperCase();
+            if(code.length !== 4) return;
+            joinRoom(code);
+        }
+
+        function joinRoom(code) {
+            roomCode = code;
+            isHost = false;
+            isLocalMode = false;
+            
+            peer = initPeer();
+            peer.on('open', () => {
+                conn = peer.connect('samespot-room-' + code);
+                setupConnection();
+            });
+        }
+
+        function setupConnection() {
+            conn.on('open', () => {
+                if (!isHost) {
+                    conn.send({ type: 'READY_GUEST', username: userData.username });
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'READY_GUEST' && isHost) {
+                    currentPartnerUsername = data.username || "@partner";
+                    startNewMatch(); 
+                } 
+                else if (data.type === 'START_GAME') {
+                    currentPartnerUsername = data.username || "@partner";
+                    myBoard = data.board;
+                    targetIndex = data.targetIndex;
+                    
+                    showScreen('loading-screen');
+                    setTimeout(() => {
+                        document.getElementById('single-board').style.display = 'grid';
+                        document.getElementById('split-board').style.display = 'none';
+                        resetGameState();
+                        renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                        showScreen('game-screen');
+                    }, 1200);
+                } 
+                else if (data.type === 'GUESS') {
+                    const el = document.getElementById('single-board').children[data.index];
+                    if (el) applyGuessResult(data.index, el, false);
+                } 
+                else if (data.type === 'CHAT') {
+                    addChatMessage(currentPartnerUsername, data.message, false);
+                }
+            });
+
+            conn.on('close', () => {
+                alert("Partner disconnected.");
+                exitToLobby();
+            });
+        }
+
+        function startNewMatch() {
+            const data = generateGameData();
+            targetIndex = data.targetIndex;
+            myBoard = data.p1Board;
+
+            if (conn && conn.open) {
+                conn.send({
+                    type: 'START_GAME',
+                    board: data.p2Board,
+                    targetIndex: data.targetIndex,
+                    username: userData.username
+                });
+            }
+
+            showScreen('loading-screen');
+            setTimeout(() => {
+                document.getElementById('single-board').style.display = 'grid';
+                document.getElementById('split-board').style.display = 'none';
+                resetGameState();
+                renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                showScreen('game-screen');
+            }, 1200);
+        }
+
+        function startLocalMode() {
+            isLocalMode = true;
+            currentPartnerUsername = "@player2";
+            const data = generateGameData();
+            targetIndex = data.targetIndex;
+
+            showScreen('loading-screen');
+            setTimeout(() => {
+                document.getElementById('single-board').style.display = 'none';
+                document.getElementById('chat-box').style.display = 'none';
+                document.getElementById('split-board').style.display = 'flex';
+                resetGameState();
+
+                renderBoard('p1-grid', data.p1Board, (idx, el) => {
+                    if (activeTurn !== 1) return;
+                    const clickedVal = data.p1Board[idx];
+                    applyGuessResult(idx, el, true);
+                    if (!gameOver && idx !== targetIndex) {
+                        const p2Idx = data.p2Board.indexOf(clickedVal);
+                        if (p2Idx !== -1) document.getElementById('p2-grid').children[p2Idx].classList.add('wrong', 'disabled');
+                    }
+                });
+
+                renderBoard('p2-grid', data.p2Board, (idx, el) => {
+                    if (activeTurn !== 2) return;
+                    const clickedVal = data.p2Board[idx];
+                    applyGuessResult(idx, el, false);
+                    if (!gameOver && idx !== targetIndex) {
+                        const p1Idx = data.p1Board.indexOf(clickedVal);
+                        if (p1Idx !== -1) document.getElementById('p1-grid').children[p1Idx].classList.add('wrong', 'disabled');
+                    }
+                });
+
+                showScreen('game-screen');
+            }, 1200);
+        }
+
+        function exitToLobby() {
+            if (conn) { conn.close(); conn = null; }
+            if (peer) { peer.destroy(); peer = null; }
+            showScreen('lobby-screen');
+            updateProfileUI();
         }
 
         function sendChatMessage(e) {
@@ -793,8 +1286,10 @@
             const msg = input.value.trim();
             if(!msg) return;
             
-            addChatMessage(myProfile.displayName, msg, true);
-            if(activeConnection) activeConnection.send({ type: 'CHAT', message: msg });
+            addChatMessage(userData.username, msg, true);
+            if(conn && conn.open && !isLocalMode) {
+                conn.send({ type: 'CHAT', message: msg });
+            }
             input.value = '';
         }
 
@@ -802,16 +1297,13 @@
             const box = document.getElementById('chat-messages');
             const msgDiv = document.createElement('div');
             msgDiv.className = isMe ? 'chat-msg me' : 'chat-msg';
-            msgDiv.innerHTML = `<span class="sender">${sender}</span>${text}`;
-            box.appendChild(msgDiv);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function addSystemChat(text) {
-            const box = document.getElementById('chat-messages');
-            const msgDiv = document.createElement('div');
-            msgDiv.className = 'chat-msg';
-            msgDiv.innerHTML = `<span class="sender">System</span>${text}`;
+            
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'sender';
+            senderSpan.textContent = sender;
+            
+            msgDiv.appendChild(senderSpan);
+            msgDiv.appendChild(document.createTextNode(text));
             box.appendChild(msgDiv);
             box.scrollTop = box.scrollHeight;
         }

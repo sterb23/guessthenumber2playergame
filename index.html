@@ -17,6 +17,7 @@
             --text-dim: #666666;
             --radius: 12px;
             --green: #00ff66;
+            --yellow: #ffcc00;
         }
 
         * {
@@ -197,11 +198,18 @@
         /* HUD & Vector Hearts */
         .hud {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .hud-top {
+            display: flex;
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            margin-bottom: 24px;
-            padding: 0 4px;
         }
 
         .lives-container {
@@ -225,6 +233,25 @@
             opacity: 0.3;
         }
 
+        .turn-banner {
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--yellow);
+            transition: all 0.3s ease;
+        }
+
+        .turn-banner.my-turn {
+            color: var(--bg);
+            background: var(--green);
+            border-color: var(--green);
+        }
+
         .status-badge {
             font-size: 0.75rem;
             font-weight: 700;
@@ -232,7 +259,6 @@
             text-transform: uppercase;
             color: var(--text-dim);
             text-align: center;
-            flex: 1;
         }
 
         /* Board & Circles Grid */
@@ -241,6 +267,12 @@
             grid-template-columns: repeat(5, 1fr);
             gap: 12px;
             width: 100%;
+            transition: opacity 0.3s ease;
+        }
+
+        .board-grid.turn-disabled {
+            opacity: 0.4;
+            pointer-events: none;
         }
 
         .circle {
@@ -257,7 +289,6 @@
             cursor: pointer;
             user-select: none;
             opacity: 0;
-            /* Bouncier Pop In */
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             animation-delay: calc(var(--i) * 0.02s);
             transition: transform 0.3s ease, border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, opacity 0.4s ease;
@@ -289,7 +320,6 @@
             animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
         }
 
-        /* Green Pulse Correct State */
         .circle.correct {
             background: var(--green) !important;
             border-color: var(--green) !important;
@@ -301,7 +331,6 @@
             z-index: 10;
         }
 
-        /* Fade out non-target circles */
         .circle.fade-out {
             opacity: 0 !important;
             transform: scale(0.4) !important;
@@ -458,13 +487,16 @@
     <!-- GAMEPLAY SCREEN -->
     <div id="game-screen" class="screen">
         <div class="hud">
-            <div class="lives-container" id="lives-box">
-                <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <div class="hud-top">
+                <div class="lives-container" id="lives-box">
+                    <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </div>
+                <div id="turn-banner" class="turn-banner">YOUR TURN</div>
+                <button class="text-only" onclick="exitToLobby()">✕ EXIT</button>
             </div>
             <div class="status-badge" id="game-status">FIND THE 1 MATCHING SPOT</div>
-            <button class="text-only" onclick="exitToLobby()">✕ EXIT</button>
         </div>
 
         <!-- Single View Grid -->
@@ -510,6 +542,9 @@
         let lives = 3;
         let gameOver = false;
         let isLocalMode = false;
+        
+        // Turn Control State ('host' or 'guest' in online mode; 1 or 2 in local mode)
+        let activeTurn = 'host';
 
         function getNickname() {
             const input = document.getElementById('nickname-input').value.trim();
@@ -524,7 +559,6 @@
             
             const params = new URLSearchParams(window.location.search);
             if (params.has('room')) {
-                // Strips out any accidental URL slashes or spaces
                 let safeCode = params.get('room').replace(/[^a-zA-Z0-9]/g, '');
                 document.getElementById('room-input').value = safeCode.toUpperCase();
             }
@@ -607,9 +641,53 @@
         function resetGameState() {
             lives = 3;
             gameOver = false;
+            activeTurn = isLocalMode ? 1 : 'host';
             document.getElementById('restart-btn').style.display = 'none';
             document.getElementById('game-status').textContent = 'FIND THE 1 MATCHING SPOT';
+            updateTurnUI();
             updateLivesUI();
+        }
+
+        function updateTurnUI() {
+            const banner = document.getElementById('turn-banner');
+            const singleBoard = document.getElementById('single-board');
+
+            if (isLocalMode) {
+                banner.textContent = `PLAYER ${activeTurn}'S TURN`;
+                banner.classList.add('my-turn');
+                
+                const p1Grid = document.getElementById('p1-grid');
+                const p2Grid = document.getElementById('p2-grid');
+
+                if (activeTurn === 1) {
+                    p1Grid.classList.remove('turn-disabled');
+                    p2Grid.classList.add('turn-disabled');
+                } else {
+                    p2Grid.classList.remove('turn-disabled');
+                    p1Grid.classList.add('turn-disabled');
+                }
+            } else {
+                const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
+                
+                if (isMyTurn) {
+                    banner.textContent = "YOUR TURN";
+                    banner.classList.add('my-turn');
+                    singleBoard.classList.remove('turn-disabled');
+                } else {
+                    banner.textContent = `${partnerNickname.toUpperCase()}'S TURN`;
+                    banner.classList.remove('my-turn');
+                    singleBoard.classList.add('turn-disabled');
+                }
+            }
+        }
+
+        function switchTurn() {
+            if (isLocalMode) {
+                activeTurn = activeTurn === 1 ? 2 : 1;
+            } else {
+                activeTurn = activeTurn === 'host' ? 'guest' : 'host';
+            }
+            updateTurnUI();
         }
 
         function updateLivesUI() {
@@ -628,7 +706,12 @@
         }
 
         function handleGuess(index, el) {
+            // Check if it is currently my turn in online mode
+            const isMyTurn = (isHost && activeTurn === 'host') || (!isHost && activeTurn === 'guest');
+            if (!isLocalMode && !isMyTurn) return;
+
             applyGuessResult(index, el, true);
+            
             if (conn && conn.open && !isLocalMode) {
                 conn.send({ type: 'GUESS', index: index });
             }
@@ -658,12 +741,18 @@
                 
                 lives--;
                 updateLivesUI();
+                
+                if (!gameOver) {
+                    switchTurn();
+                }
             }
         }
 
         function handleVictory(isMe) {
             let msg = isLocalMode ? "MATCH FOUND! YOU WIN!" : (isMe ? "YOU FOUND THE MATCH!" : `${partnerNickname} FOUND IT!`);
             document.getElementById('game-status').textContent = msg;
+            document.getElementById('turn-banner').textContent = "MATCH FOUND!";
+            document.getElementById('turn-banner').classList.add('my-turn');
             
             if(isHost || isLocalMode) {
                 setTimeout(() => {
@@ -674,6 +763,9 @@
 
         function handleLoss() {
             document.getElementById('game-status').textContent = "OUT OF LIVES! GAME OVER.";
+            document.getElementById('turn-banner').textContent = "GAME OVER";
+            document.getElementById('turn-banner').classList.remove('my-turn');
+            
             const grids = document.querySelectorAll('.board-grid');
             grids.forEach(grid => {
                 if(grid.children[targetIndex]) {
@@ -695,18 +787,17 @@
             }
         }
 
-        // --- NETWORK INITIALIZATION FIX ---
+        // --- NETWORK INITIALIZATION ---
         function initPeer(id) {
             const options = {
                 debug: 1,
                 config: {
                     'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' },    // Fixed from url to urls
-                        { urls: 'stun:stun1.l.google.com:19302' }   // Added fallback
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
                     ]
                 }
             };
-            // Prevent undefined ID errors on Guest join
             return id ? new Peer(id, options) : new Peer(options);
         }
 
@@ -749,10 +840,9 @@
             isLocalMode = false;
             
             const fullId = 'samespot-room-' + code;
-            peer = initPeer(); // Auto-generates clean ID for guest
+            peer = initPeer();
 
             peer.on('open', (id) => {
-                // Removed { reliable: true } which causes iOS/Safari cross-network bugs
                 conn = peer.connect(fullId);
                 setupConnection();
             });
@@ -760,7 +850,6 @@
             peer.on('error', handlePeerError);
         }
 
-        // Clearer Error feedback
         function handlePeerError(err) {
             let msg = "Network error occurred.";
             if (err.type === 'peer-unavailable') {
@@ -856,6 +945,7 @@
             resetGameState();
             
             renderBoard('p1-grid', data.p1Board, (idx, el) => {
+                if (activeTurn !== 1) return;
                 applyGuessResult(idx, el, true);
                 if(!gameOver) {
                     const p2El = document.getElementById('p2-grid').children[idx];
@@ -864,6 +954,7 @@
             });
             
             renderBoard('p2-grid', data.p2Board, (idx, el) => {
+                if (activeTurn !== 2) return;
                 applyGuessResult(idx, el, false);
                 if(!gameOver) {
                     const p1El = document.getElementById('p1-grid').children[idx];

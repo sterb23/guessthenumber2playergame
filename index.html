@@ -46,7 +46,7 @@
             -webkit-user-select: none;
         }
 
-        /* Ambient Game Background Glow for Desktop */
+        /* Ambient Game Background Glow */
         body::before {
             content: '';
             position: fixed;
@@ -98,12 +98,12 @@
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 0.15em;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
             text-align: center;
             font-weight: 600;
         }
 
-        /* Cards & UI Elements */
+        /* Cards & Buttons */
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -179,6 +179,16 @@
             background: var(--surface-hover);
         }
 
+        button.accent {
+            background: transparent;
+            color: var(--green);
+            border-color: var(--green);
+        }
+
+        button.accent:hover {
+            background: rgba(0, 255, 102, 0.1);
+        }
+
         button.text-only {
             background: transparent;
             border: none;
@@ -228,7 +238,190 @@
             text-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
         }
 
-        /* HUD & Vector Hearts */
+        /* ------------------------------------------------------------- */
+        /* LOADING SCREEN COMPONENTS */
+        /* ------------------------------------------------------------- */
+        .loading-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 20px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+
+        .spinner-ring {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border);
+            border-top-color: var(--green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00b347 0%, var(--green) 100%);
+            border-radius: 10px;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 12px rgba(0, 255, 102, 0.5);
+        }
+
+        .tip-box {
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tip-label {
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            color: var(--green);
+            text-transform: uppercase;
+        }
+
+        .tip-text {
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.4;
+            font-weight: 500;
+            max-width: 320px;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* GUIDEBOOK MODAL COMPONENTS */
+        /* ------------------------------------------------------------- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 5, 5, 0.88);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .guidebook-card {
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 480px;
+            max-height: 85dvh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        .guidebook-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .guidebook-header h2 {
+            font-size: 1.2rem;
+            font-weight: 900;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .guidebook-body {
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .guidebook-body::-webkit-scrollbar {
+            width: 5px;
+        }
+        .guidebook-body::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .guide-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .guide-section h3 {
+            font-size: 0.8rem;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 800;
+        }
+
+        .guide-section p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.45;
+        }
+
+        .guide-bullet-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .guide-bullet-list li {
+            font-size: 0.85rem;
+            color: var(--text);
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+            line-height: 1.4;
+        }
+
+        .guide-bullet-list li::before {
+            content: '•';
+            color: var(--green);
+            font-weight: bold;
+        }
+
+        /* HUD & Gameplay Elements */
         .hud {
             display: flex;
             flex-direction: column;
@@ -300,7 +493,6 @@
             text-align: center;
         }
 
-        /* Board & Circles Grid */
         .board-grid {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -333,7 +525,6 @@
             transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        /* Desktop Hover state */
         @media (hover: hover) {
             .circle:hover:not(.disabled):not(.fade-out) {
                 border-color: var(--border-bright);
@@ -388,17 +579,11 @@
         }
 
         @keyframes winPulse {
-            from {
-                transform: scale(1);
-                box-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
-            }
-            to {
-                transform: scale(1.15);
-                box-shadow: 0 0 35px rgba(0, 255, 102, 1);
-            }
+            from { transform: scale(1); box-shadow: 0 0 10px rgba(0, 255, 102, 0.4); }
+            to { transform: scale(1.15); box-shadow: 0 0 35px rgba(0, 255, 102, 1); }
         }
 
-        /* Minimalist Chat Component */
+        /* Chat Component */
         .chat-card {
             width: 100%;
             background: var(--surface);
@@ -422,7 +607,6 @@
         .chat-messages::-webkit-scrollbar {
             width: 4px;
         }
-
         .chat-messages::-webkit-scrollbar-thumb {
             background: var(--border);
             border-radius: 4px;
@@ -457,7 +641,7 @@
             padding: 10px 16px;
         }
 
-        /* Local Split Screen Mode */
+        /* Local Split View */
         .split-container {
             display: none;
             gap: 20px;
@@ -488,17 +672,10 @@
             display: none;
         }
 
-        /* ------------------------------------------------------------- */
-        /* DESKTOP GAME ENGINE LAYOUT (Min-width: 768px) */
-        /* ------------------------------------------------------------- */
+        /* Desktop Layout Override */
         @media (min-width: 768px) {
-            body {
-                padding: 40px;
-            }
-
-            .shortcut-tip {
-                display: block;
-            }
+            body { padding: 40px; }
+            .shortcut-tip { display: block; }
 
             #game-screen {
                 max-width: 860px;
@@ -509,50 +686,18 @@
                 align-items: start;
             }
 
-            #game-screen.active {
-                display: grid;
-            }
-
-            #game-screen .hud {
-                grid-column: 1 / -1;
-                margin-bottom: 0;
-            }
-
-            #single-board {
-                grid-column: 1 / 2;
-            }
-
-            .split-container {
-                grid-column: 1 / -1;
-            }
-
-            #chat-box {
-                grid-column: 2 / 3;
-                height: 100%;
-                margin-top: 0;
-                justify-content: space-between;
-            }
-
-            .chat-messages {
-                height: 240px;
-            }
-
-            #restart-btn {
-                grid-column: 1 / -1;
-            }
-
-            .desktop-exit-btn {
-                grid-column: 2 / 3;
-            }
+            #game-screen.active { display: grid; }
+            #game-screen .hud { grid-column: 1 / -1; margin-bottom: 0; }
+            #single-board { grid-column: 1 / 2; }
+            .split-container { grid-column: 1 / -1; }
+            #chat-box { grid-column: 2 / 3; height: 100%; margin-top: 0; justify-content: space-between; }
+            .chat-messages { height: 240px; }
+            #restart-btn { grid-column: 1 / -1; }
         }
 
         @media (max-width: 480px) {
-            .board-grid {
-                gap: 8px;
-            }
-            .circle {
-                font-size: 1rem;
-            }
+            .board-grid { gap: 8px; }
+            .circle { font-size: 1rem; }
         }
     </style>
 </head>
@@ -576,7 +721,10 @@
             <button class="secondary" onclick="joinRoomInput()">Join Room</button>
         </div>
 
-        <button class="secondary" onclick="startLocalMode()">Offline Split-Screen</button>
+        <div style="display: flex; gap: 10px; width: 100%;">
+            <button class="secondary" onclick="startLocalMode()">Offline Split-Screen</button>
+            <button class="accent" onclick="openGuidebook()">📖 Guidebook</button>
+        </div>
     </div>
 
     <!-- WAITING ROOM SCREEN -->
@@ -591,6 +739,25 @@
 
         <div class="status-badge" id="waiting-status" style="margin-bottom: 20px;">Waiting for partner...</div>
         <button class="secondary" onclick="exitToLobby()">Exit to Lobby</button>
+    </div>
+
+    <!-- 5-SECOND LOADING SCREEN WITH TIPS -->
+    <div id="loading-screen" class="screen">
+        <h1 style="font-size: 1.8rem; margin-bottom: 2px;">MATCH LOADING</h1>
+        <div class="tagline" id="loading-status-subtitle">Preparing board matrices...</div>
+
+        <div class="loading-card">
+            <div class="spinner-ring"></div>
+            
+            <div class="tip-box">
+                <div class="tip-label">PRO TIP</div>
+                <div class="tip-text" id="tip-display">Loading game guide...</div>
+            </div>
+
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="loading-bar-fill"></div>
+            </div>
+        </div>
     </div>
 
     <!-- GAMEPLAY SCREEN -->
@@ -638,6 +805,47 @@
         <button id="restart-btn" style="display: none;" onclick="restartGame()">Play Again</button>
     </div>
 
+    <!-- GUIDEBOOK MODAL -->
+    <div id="guidebook-modal" class="modal-overlay">
+        <div class="guidebook-card">
+            <div class="guidebook-header">
+                <h2>HOW TO PLAY</h2>
+                <button class="text-only" onclick="closeGuidebook()" style="font-size: 1rem; font-weight: bold;">✕</button>
+            </div>
+            <div class="guidebook-body">
+                <div class="guide-section">
+                    <h3>🎯 The Core Objective</h3>
+                    <p>You and your teammate each see a grid of 20 numbers. Out of all 20 numbers, <b>EXACTLY ONE</b> number exists on both of your boards at the same time!</p>
+                </div>
+
+                <div class="guide-section">
+                    <h3>❤️ Shared Lives & Turn Taking</h3>
+                    <ul class="guide-bullet-list">
+                        <li>You and your partner share <b>3 Hearts</b>.</li>
+                        <li>Players take turns calling out or clicking a number.</li>
+                        <li><b>Correct Guess:</b> Instant Victory for both players!</li>
+                        <li><b>Wrong Guess:</b> Loses 1 Heart and hands turn over to partner.</li>
+                    </ul>
+                </div>
+
+                <div class="guide-section">
+                    <h3>💬 Communication is Key</h3>
+                    <p>Call out 2-digit numbers to your partner in chat or out loud. Read numbers in groups (e.g., "Do you have 42, 88, or 19?") to narrow down the target fast.</p>
+                </div>
+
+                <div class="guide-section">
+                    <h3>⚡ Desktop & Mobile Shortcuts</h3>
+                    <ul class="guide-bullet-list">
+                        <li><b>Desktop:</b> Hit <mark style="background:#222; color:#fff; padding:2px 6px; border-radius:4px;">Enter</mark> to type in chat instantly; press <mark style="background:#222; color:#fff; padding:2px 6px; border-radius:4px;">Esc</mark> to focus back on the board.</li>
+                        <li><b>Mobile:</b> Features native haptic vibration feedback for every tap, error, and victory!</li>
+                    </ul>
+                </div>
+
+                <button style="margin-top: 8px;" onclick="closeGuidebook()">Got It, Let's Play!</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let peer = null;
         let conn = null;
@@ -652,7 +860,17 @@
         let isLocalMode = false;
         let activeTurn = 'host';
 
-        // Tactile Haptics helper for mobile
+        // Gameplay tips database
+        const TIPS = [
+            "Both boards have 20 numbers, but EXACTLY ONE number is identical on both screens!",
+            "You share 3 hearts with your partner. One wrong click costs a life!",
+            "Use the live chat box to call out numbers you see on your board.",
+            "Take turns! Don't rush into guessing without double-checking.",
+            "On desktop, hit Enter to jump straight to chat, and Esc to return to the board!",
+            "Offline split-screen mode lets two players compete or co-op on a single screen.",
+            "Group numbers into low (10-40) and high (50-99) ranges to scan faster."
+        ];
+
         function triggerHaptic(type) {
             if (!navigator.vibrate) return;
             if (type === 'tap') navigator.vibrate(12);
@@ -660,10 +878,68 @@
             if (type === 'win') navigator.vibrate([80, 50, 100, 50, 150]);
         }
 
-        // Desktop Keyboard Shortcuts
+        // Guidebook Modal functions
+        function openGuidebook() {
+            triggerHaptic('tap');
+            document.getElementById('guidebook-modal').classList.add('active');
+        }
+
+        function closeGuidebook() {
+            triggerHaptic('tap');
+            document.getElementById('guidebook-modal').classList.remove('active');
+        }
+
+        // 5-Second Loading Screen with Tip Cycling
+        function startLoadingSequence(onComplete) {
+            showScreen('loading-screen');
+            
+            const barFill = document.getElementById('loading-bar-fill');
+            const tipDisplay = document.getElementById('tip-display');
+            
+            barFill.style.width = '0%';
+            
+            // Pick random tip
+            let tipIdx = Math.floor(Math.random() * TIPS.length);
+            tipDisplay.textContent = TIPS[tipIdx];
+            
+            // Cycle tips halfway through
+            const tipTimer = setTimeout(() => {
+                tipIdx = (tipIdx + 1) % TIPS.length;
+                tipDisplay.style.opacity = '0';
+                setTimeout(() => {
+                    tipDisplay.textContent = TIPS[tipIdx];
+                    tipDisplay.style.opacity = '1';
+                }, 200);
+            }, 2500);
+
+            // Animate progress over ~5 seconds (5000ms)
+            let progress = 0;
+            const startTime = Date.now();
+            const duration = 4800; // 4.8 seconds
+
+            const interval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                progress = Math.min(100, (elapsed / duration) * 100);
+                barFill.style.width = `${progress}%`;
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    clearTimeout(tipTimer);
+                    setTimeout(() => {
+                        onComplete();
+                    }, 300);
+                }
+            }, 50);
+        }
+
+        // Keyboard Shortcuts
         window.addEventListener('keydown', (e) => {
             const chatInput = document.getElementById('chat-input');
             const gameScreen = document.getElementById('game-screen');
+
+            if (e.key === 'Escape') {
+                closeGuidebook();
+            }
 
             if (!gameScreen.classList.contains('active')) return;
 
@@ -1009,17 +1285,19 @@
                     myBoard = data.board;
                     targetIndex = data.targetIndex;
                     
-                    document.getElementById('single-board').style.display = 'grid';
-                    document.getElementById('split-board').style.display = 'none';
-                    document.getElementById('chat-box').style.display = 'flex';
-                    
-                    resetGameState();
-                    renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-                    showScreen('game-screen');
-                    
-                    if(document.getElementById('chat-messages').children.length <= 1) {
-                        addSystemChat(`Connected to ${partnerNickname}.`);
-                    }
+                    startLoadingSequence(() => {
+                        document.getElementById('single-board').style.display = 'grid';
+                        document.getElementById('split-board').style.display = 'none';
+                        document.getElementById('chat-box').style.display = 'flex';
+                        
+                        resetGameState();
+                        renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                        showScreen('game-screen');
+                        
+                        if(document.getElementById('chat-messages').children.length <= 1) {
+                            addSystemChat(`Connected to ${partnerNickname}.`);
+                        }
+                    });
                 } 
                 else if (data.type === 'GUESS') {
                     const el = document.getElementById('single-board').children[data.index];
@@ -1050,13 +1328,15 @@
                 });
             }
 
-            document.getElementById('single-board').style.display = 'grid';
-            document.getElementById('split-board').style.display = 'none';
-            document.getElementById('chat-box').style.display = 'flex';
-            
-            resetGameState();
-            renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-            showScreen('game-screen');
+            startLoadingSequence(() => {
+                document.getElementById('single-board').style.display = 'grid';
+                document.getElementById('split-board').style.display = 'none';
+                document.getElementById('chat-box').style.display = 'flex';
+                
+                resetGameState();
+                renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                showScreen('game-screen');
+            });
         }
 
         function startLocalMode() {
@@ -1068,31 +1348,33 @@
             const data = generateGameData();
             targetIndex = data.targetIndex;
 
-            document.getElementById('single-board').style.display = 'none';
-            document.getElementById('chat-box').style.display = 'none';
-            document.getElementById('split-board').style.display = 'flex';
-            
-            resetGameState();
-            
-            renderBoard('p1-grid', data.p1Board, (idx, el) => {
-                if (activeTurn !== 1) return;
-                applyGuessResult(idx, el, true);
-                if(!gameOver) {
-                    const p2El = document.getElementById('p2-grid').children[idx];
-                    p2El.classList.add('wrong', 'disabled');
-                }
-            });
-            
-            renderBoard('p2-grid', data.p2Board, (idx, el) => {
-                if (activeTurn !== 2) return;
-                applyGuessResult(idx, el, false);
-                if(!gameOver) {
-                    const p1El = document.getElementById('p1-grid').children[idx];
-                    p1El.classList.add('wrong', 'disabled');
-                }
-            });
+            startLoadingSequence(() => {
+                document.getElementById('single-board').style.display = 'none';
+                document.getElementById('chat-box').style.display = 'none';
+                document.getElementById('split-board').style.display = 'flex';
+                
+                resetGameState();
+                
+                renderBoard('p1-grid', data.p1Board, (idx, el) => {
+                    if (activeTurn !== 1) return;
+                    applyGuessResult(idx, el, true);
+                    if(!gameOver) {
+                        const p2El = document.getElementById('p2-grid').children[idx];
+                        p2El.classList.add('wrong', 'disabled');
+                    }
+                });
+                
+                renderBoard('p2-grid', data.p2Board, (idx, el) => {
+                    if (activeTurn !== 2) return;
+                    applyGuessResult(idx, el, false);
+                    if(!gameOver) {
+                        const p1El = document.getElementById('p1-grid').children[idx];
+                        p1El.classList.add('wrong', 'disabled');
+                    }
+                });
 
-            showScreen('game-screen');
+                showScreen('game-screen');
+            });
         }
 
         function exitToLobby() {

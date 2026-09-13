@@ -226,11 +226,13 @@
         }
 
         .status-badge {
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             letter-spacing: 0.05em;
             text-transform: uppercase;
             color: var(--text-dim);
+            text-align: center;
+            flex: 1;
         }
 
         /* Board & Circles Grid */
@@ -255,8 +257,9 @@
             cursor: pointer;
             user-select: none;
             opacity: 0;
-            animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            animation-delay: calc(var(--i) * 0.025s);
+            /* Bouncier Pop In */
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            animation-delay: calc(var(--i) * 0.02s);
             transition: transform 0.3s ease, border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease, opacity 0.4s ease;
         }
 
@@ -275,7 +278,7 @@
         }
 
         @keyframes popIn {
-            from { opacity: 0; transform: scale(0.5); }
+            from { opacity: 0; transform: scale(0.3); }
             to { opacity: 1; transform: scale(1); }
         }
 
@@ -423,9 +426,13 @@
         <div class="tagline">Co-Op Number Finder</div>
 
         <div class="card">
+            <input type="text" id="nickname-input" placeholder="YOUR NICKNAME" maxlength="12" autocomplete="off">
+            
+            <div class="divider">create or join</div>
+
             <button onclick="createRoom()">Create New Room</button>
             
-            <div class="divider">or join with code</div>
+            <div class="divider">or enter code</div>
             
             <input type="text" id="room-input" class="code-input" placeholder="CODE" maxlength="4" autocomplete="off">
             <button class="secondary" onclick="joinRoomInput()">Join Room</button>
@@ -456,7 +463,7 @@
                 <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 <svg class="heart-svg" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             </div>
-            <div class="status-badge" id="game-status">FIND THE MATCH TOGETHER</div>
+            <div class="status-badge" id="game-status">FIND THE 1 MATCHING SPOT</div>
             <button class="text-only" onclick="exitToLobby()">✕ EXIT</button>
         </div>
 
@@ -466,11 +473,11 @@
         <!-- Local Split View -->
         <div id="split-board" class="split-container">
             <div class="split-column">
-                <div class="split-title">Player 1</div>
+                <div class="split-title" id="p1-title">Player 1</div>
                 <div id="p1-grid" class="board-grid"></div>
             </div>
             <div class="split-column">
-                <div class="split-title">Player 2</div>
+                <div class="split-title" id="p2-title">Player 2</div>
                 <div id="p2-grid" class="board-grid"></div>
             </div>
         </div>
@@ -496,315 +503,199 @@
         let conn = null;
         let roomCode = "";
         let isHost = false;
+        let myNickname = "Player";
+        let partnerNickname = "Partner";
         let myBoard = [];
         let targetIndex = -1;
         let lives = 3;
         let gameOver = false;
         let isLocalMode = false;
 
-        function showScreen(screenId) {
+        function getNickname() {
+            const input = document.getElementById('nickname-input').value.trim();
+            const name = input || "Player";
+            localStorage.setItem('samespot_nick', name);
+            return name;
+        }
+
+        window.onload = () => {
+            const saved = localStorage.getItem('samespot_nick');
+            if(saved) document.getElementById('nickname-input').value = saved;
+            
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('room')) {
+                document.getElementById('room-input').value = params.get('room');
+            }
+        }
+
+        function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            document.getElementById(id).classList.add('active');
         }
 
         function generateCode() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-            let code = '';
-            for (let i = 0; i < 4; i++) {
-                code += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return code;
+            let res = '';
+            for(let i=0; i<4; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
         }
 
-        function createRoom() {
-            roomCode = generateCode();
-            isHost = true;
-
-            document.getElementById('code-display').innerText = roomCode;
-            showScreen('waiting-screen');
-
-            peer = new Peer('samespot-coop-' + roomCode);
-
-            peer.on('open', () => {
-                document.getElementById('waiting-status').innerText = "Waiting for partner...";
-            });
-
-            peer.on('connection', (c) => {
-                conn = c;
-                setupConnection();
-                startNewMatch();
-            });
-
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    createRoom();
-                } else {
-                    alert("Error creating room. Please try again.");
-                    showScreen('lobby-screen');
-                }
-            });
-        }
-
-        function joinRoomInput() {
-            const code = document.getElementById('room-input').value.trim().toUpperCase();
-            if (code.length !== 4) {
-                alert("Please enter a valid 4-character code.");
-                return;
-            }
-            joinRoom(code);
-        }
-
-        function joinRoom(code) {
-            roomCode = code;
-            isHost = false;
-            peer = new Peer();
-
-            peer.on('open', () => {
-                conn = peer.connect('samespot-coop-' + code);
-                setupConnection();
-            });
-
-            peer.on('error', () => {
-                alert("Could not connect to room. Check the code and try again.");
-                showScreen('lobby-screen');
-            });
-        }
-
-        function setupConnection() {
-            conn.on('open', () => {
-                showScreen('game-screen');
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'START_GAME') {
-                    myBoard = data.board;
-                    targetIndex = data.targetIndex;
-                    resetGameState();
-                    renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-                    showScreen('game-screen');
-                } else if (data.type === 'GUESS') {
-                    const container = document.getElementById('single-board');
-                    const circle = container.children[data.index];
-                    if (circle) {
-                        applyGuessResult(data.index, circle, true);
-                    }
-                } else if (data.type === 'CHAT') {
-                    appendChatMessage('Partner', data.text, false);
-                }
-            });
-
-            conn.on('close', () => {
-                appendChatMessage('System', 'Partner disconnected.', false);
-            });
-        }
-
-        function exitToLobby() {
-            if (conn) {
-                try { conn.close(); } catch(e){}
-                conn = null;
-            }
-            if (peer) {
-                try { peer.destroy(); } catch(e){}
-                peer = null;
-            }
-
-            roomCode = "";
-            isHost = false;
-            isLocalMode = false;
-            gameOver = false;
-
-            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>';
-            document.getElementById('chat-box').style.display = 'flex';
-            document.getElementById('single-board').style.display = 'grid';
-            document.getElementById('split-board').style.display = 'none';
-
-            window.history.replaceState({}, document.title, window.location.pathname);
-            showScreen('lobby-screen');
-        }
-
-        function sendChatMessage(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            appendChatMessage('You', text, true);
-
-            if (conn && conn.open) {
-                conn.send({ type: 'CHAT', text: text });
-            }
-
-            input.value = '';
-        }
-
-        function appendChatMessage(sender, text, isMe) {
-            const box = document.getElementById('chat-messages');
-            const msgEl = document.createElement('div');
-            msgEl.className = `chat-msg ${isMe ? 'me' : ''}`;
-            msgEl.innerHTML = `<span class="sender">${sender}</span>${escapeHTML(text)}`;
-            box.appendChild(msgEl);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
+        // ==========================================
+        // GAME LOGIC: THE DERANGEMENT (Identical Pools)
+        // ==========================================
         function generateGameData() {
-            const targetIndex = Math.floor(Math.random() * 20);
-            let masterPool = Array.from({length: 90}, (_, i) => i + 10).sort(() => Math.random() - 0.5);
-            const targetNum = masterPool.pop();
-
+            const targetIdx = Math.floor(Math.random() * 20);
+            
+            // 1. Pick exactly 20 unique random numbers for both players to share
+            const pool = [];
+            while(pool.length < 20) {
+                let r = Math.floor(Math.random() * 90) + 10;
+                if(!pool.includes(r)) pool.push(r);
+            }
+            
+            const targetNum = pool[0];
+            const others = pool.slice(1); // The other 19 numbers
+            
+            // 2. Shuffle for Player 1
+            let p1Others = [...others].sort(() => Math.random() - 0.5);
+            let p2Others = [];
+            
+            // 3. Create a perfect "Derangement" for Player 2. 
+            // This guarantees P2 has the EXACT same 19 numbers as P1, but NEVER in the same slot.
+            let valid = false;
+            while(!valid) {
+                p2Others = [...p1Others].sort(() => Math.random() - 0.5);
+                valid = true;
+                for(let i=0; i<19; i++) {
+                    if(p1Others[i] === p2Others[i]) {
+                        valid = false;
+                        break;
+                    }
+                }
+            }
+            
+            // 4. Assemble boards
             let p1Board = new Array(20);
             let p2Board = new Array(20);
-
-            p1Board[targetIndex] = targetNum;
-            p2Board[targetIndex] = targetNum;
-
-            for (let i = 0; i < 20; i++) {
-                if (i !== targetIndex) {
-                    p1Board[i] = masterPool.pop();
+            let oIdx = 0;
+            
+            for(let i = 0; i < 20; i++) {
+                if(i === targetIdx) {
+                    p1Board[i] = targetNum;
+                    p2Board[i] = targetNum;
+                } else {
+                    p1Board[i] = p1Others[oIdx];
+                    p2Board[i] = p2Others[oIdx];
+                    oIdx++;
                 }
             }
-
-            let p2Pool = Array.from({length: 90}, (_, i) => i + 10)
-                .filter(n => n !== targetNum)
-                .sort(() => Math.random() - 0.5);
-
-            for (let i = 0; i < 20; i++) {
-                if (i !== targetIndex) {
-                    let matchIdx = p2Pool.findIndex(n => n !== p1Board[i]);
-                    p2Board[i] = p2Pool.splice(matchIdx, 1)[0];
-                }
-            }
-
-            return { targetIndex, p1Board, p2Board };
+            
+            return { targetIndex: targetIdx, p1Board, p2Board };
         }
 
-        function startNewMatch() {
-            const data = generateGameData();
-            targetIndex = data.targetIndex;
-            myBoard = data.p1Board;
-
-            conn.send({
-                type: 'START_GAME',
-                board: data.p2Board,
-                targetIndex: data.targetIndex
-            });
-
-            resetGameState();
-            renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
-        }
-
-        function handleGuess(index, el) {
-            if (gameOver || el.classList.contains('disabled')) return;
-
-            if (!isLocalMode && conn && conn.open) {
-                conn.send({ type: 'GUESS', index: index });
-            }
-
-            applyGuessResult(index, el, false);
-        }
-
-        function applyGuessResult(index, el, isPartner) {
-            if (gameOver || el.classList.contains('disabled')) return;
-
-            if (index === targetIndex) {
-                handleVictory(index, isPartner);
-            } else {
-                el.classList.add('wrong', 'disabled');
-                lives--;
-                updateHeartsUI();
-
-                if (isPartner) {
-                    appendChatMessage('System', `Partner tried spot #${index + 1} (${el.innerText}) - Wrong!`, false);
-                }
-
-                if (lives <= 0) {
-                    gameOver = true;
-                    document.getElementById('game-status').innerText = "OUT OF LIVES - GAME OVER";
-                    highlightTarget();
-                    if (isHost || isLocalMode) document.getElementById('restart-btn').style.display = 'block';
-                }
-            }
-        }
-
-        function handleVictory(winningIndex, isPartner) {
-            gameOver = true;
-            document.getElementById('game-status').innerText = isPartner ? "PARTNER FOUND IT! YOU WIN!" : "YOU FOUND IT! TEAM WINS!";
-
-            const containers = isLocalMode 
-                ? [document.getElementById('p1-grid'), document.getElementById('p2-grid')]
-                : [document.getElementById('single-board')];
-
-            containers.forEach(container => {
-                const circles = container.getElementsByClassName('circle');
-                Array.from(circles).forEach((circle, i) => {
-                    if (i === winningIndex) {
-                        circle.classList.add('correct');
-                        circle.classList.remove('fade-out');
-                    } else {
-                        circle.classList.add('fade-out');
-                    }
-                });
-            });
-
-            if (isHost || isLocalMode) document.getElementById('restart-btn').style.display = 'block';
-        }
-
-        function highlightTarget() {
-            const containers = isLocalMode 
-                ? [document.getElementById('p1-grid'), document.getElementById('p2-grid')]
-                : [document.getElementById('single-board')];
-
-            containers.forEach(container => {
-                const circles = container.getElementsByClassName('circle');
-                Array.from(circles).forEach((circle, i) => {
-                    if (i === targetIndex) {
-                        circle.classList.add('correct');
-                    }
-                });
+        // ==========================================
+        // UI & RENDERING
+        // ==========================================
+        function renderBoard(containerId, boardData, clickHandler) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            boardData.forEach((num, index) => {
+                const div = document.createElement('div');
+                div.className = 'circle';
+                div.textContent = num;
+                // Add staggered animation delay inline
+                div.style.setProperty('--i', index);
+                div.onclick = () => {
+                    if (gameOver || div.classList.contains('disabled')) return;
+                    clickHandler(index, div);
+                };
+                container.appendChild(div);
             });
         }
 
         function resetGameState() {
             lives = 3;
             gameOver = false;
-            updateHeartsUI();
-            document.getElementById('game-status').innerText = "FIND THE MATCH TOGETHER";
             document.getElementById('restart-btn').style.display = 'none';
+            document.getElementById('game-status').textContent = 'FIND THE 1 MATCHING SPOT';
+            updateLivesUI();
         }
 
-        function updateHeartsUI() {
-            const hearts = document.querySelectorAll('#lives-box .heart-svg');
-            hearts.forEach((heart, i) => {
+        function updateLivesUI() {
+            const hearts = document.querySelectorAll('.heart-svg');
+            hearts.forEach((h, i) => {
                 if (i < lives) {
-                    heart.classList.remove('lost');
+                    h.classList.remove('lost');
                 } else {
-                    heart.classList.add('lost');
+                    h.classList.add('lost');
                 }
             });
+            if (lives <= 0 && !gameOver) {
+                gameOver = true;
+                handleLoss();
+            }
         }
 
-        function renderBoard(containerId, boardData, clickHandler) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            boardData.forEach((num, index) => {
-                const circle = document.createElement('div');
-                circle.className = 'circle';
-                circle.style.setProperty('--i', index);
-                circle.innerText = num;
-                circle.onclick = () => clickHandler(index, circle);
-                container.appendChild(circle);
+        function handleGuess(index, el) {
+            applyGuessResult(index, el, true);
+            if (conn && conn.open && !isLocalMode) {
+                conn.send({ type: 'GUESS', index: index });
+            }
+        }
+
+        function applyGuessResult(index, element, isMe) {
+            if (gameOver) return;
+
+            if (index === targetIndex) {
+                gameOver = true;
+                element.classList.add('correct');
+                handleVictory(isMe);
+                
+                // Fade out all other circles
+                const siblings = element.parentElement.children;
+                for(let i=0; i<siblings.length; i++) {
+                    if(i !== index) siblings[i].classList.add('fade-out');
+                }
+            } else {
+                element.classList.add('wrong');
+                element.classList.add('disabled');
+                
+                let message = "Wrong spot!";
+                if (!isLocalMode) {
+                    message = isMe ? "You tried a spot - Wrong!" : `${partnerNickname} tried a spot - Wrong!`;
+                }
+                document.getElementById('game-status').textContent = message;
+                
+                lives--;
+                updateLivesUI();
+            }
+        }
+
+        function handleVictory(isMe) {
+            let msg = isLocalMode ? "MATCH FOUND! YOU WIN!" : (isMe ? "YOU FOUND THE MATCH!" : `${partnerNickname} FOUND IT!`);
+            document.getElementById('game-status').textContent = msg;
+            
+            if(isHost || isLocalMode) {
+                setTimeout(() => {
+                    document.getElementById('restart-btn').style.display = 'block';
+                }, 1000);
+            }
+        }
+
+        function handleLoss() {
+            document.getElementById('game-status').textContent = "OUT OF LIVES! GAME OVER.";
+            const grids = document.querySelectorAll('.board-grid');
+            grids.forEach(grid => {
+                if(grid.children[targetIndex]) {
+                    grid.children[targetIndex].classList.add('correct');
+                }
             });
-        }
-
-        function copyRoomLink() {
-            const url = `${window.location.origin}${window.location.pathname}?room=${roomCode}`;
-            navigator.clipboard.writeText(url);
-            alert("Room link copied to clipboard!");
+            if(isHost || isLocalMode) {
+                setTimeout(() => {
+                    document.getElementById('restart-btn').style.display = 'block';
+                }, 1000);
+            }
         }
 
         function restartGame() {
@@ -815,29 +706,235 @@
             }
         }
 
-        function startLocalMode() {
-            isLocalMode = true;
-            document.getElementById('single-board').style.display = 'none';
-            document.getElementById('split-board').style.display = 'flex';
-            document.getElementById('chat-box').style.display = 'none';
-            showScreen('game-screen');
-
-            const data = generateGameData();
-            targetIndex = data.targetIndex;
-            resetGameState();
-
-            renderBoard('p1-grid', data.p1Board, (idx, el) => handleGuess(idx, el));
-            renderBoard('p2-grid', data.p2Board, (idx, el) => handleGuess(idx, el));
+        // ==========================================
+        // MULTIPLAYER NETWORKING (PeerJS)
+        // ==========================================
+        function initPeer(id) {
+            return new Peer(id, {
+                debug: 1,
+                config: {'iceServers': [
+                    { url: 'stun:stun.l.google.com:19302' }
+                ]}
+            });
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const roomParam = urlParams.get('room');
-            if (roomParam && roomParam.length === 4) {
-                document.getElementById('room-input').value = roomParam.toUpperCase();
-                joinRoom(roomParam.toUpperCase());
+        function createRoom() {
+            myNickname = getNickname();
+            roomCode = generateCode();
+            isHost = true;
+            isLocalMode = false;
+            
+            document.getElementById('code-display').textContent = roomCode;
+            document.getElementById('waiting-status').textContent = "Connecting to server...";
+            showScreen('waiting-screen');
+
+            const fullId = 'samespot-room-' + roomCode;
+            peer = initPeer(fullId);
+
+            peer.on('open', (id) => {
+                document.getElementById('waiting-status').textContent = "Waiting for partner to join...";
+            });
+
+            peer.on('connection', (c) => {
+                if (conn) { c.close(); return; } // Only one partner allowed
+                conn = c;
+                setupConnection();
+            });
+
+            peer.on('error', (err) => {
+                alert("Network error: " + err.type);
+                exitToLobby();
+            });
+        }
+
+        function joinRoomInput() {
+            const code = document.getElementById('room-input').value.trim().toUpperCase();
+            if(code.length !== 4) { alert("Enter a 4-letter code"); return; }
+            joinRoom(code);
+        }
+
+        function joinRoom(code) {
+            myNickname = getNickname();
+            roomCode = code;
+            isHost = false;
+            isLocalMode = false;
+            
+            const fullId = 'samespot-room-' + code;
+            peer = initPeer();
+
+            peer.on('open', (id) => {
+                conn = peer.connect(fullId, { reliable: true });
+                setupConnection();
+            });
+
+            peer.on('error', (err) => {
+                alert("Room not found or connection failed.");
+                exitToLobby();
+            });
+        }
+
+        // --- THE HANDSHAKE FIX ---
+        // Host waits for Guest to send 'READY_GUEST' before sending the board.
+        // This ensures the game pops up at the exact same moment for both players.
+        function setupConnection() {
+            conn.on('open', () => {
+                if (!isHost) {
+                    // Guest tells Host they are fully ready to receive data
+                    conn.send({ type: 'READY_GUEST', nickname: myNickname });
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'READY_GUEST' && isHost) {
+                    partnerNickname = data.nickname || "Partner";
+                    addSystemChat(`${partnerNickname} joined.`);
+                    startNewMatch(); // Host sends START_GAME now that Guest is ready
+                } 
+                else if (data.type === 'START_GAME') {
+                    // Guest receives the board
+                    partnerNickname = data.nickname || "Partner";
+                    myBoard = data.board;
+                    targetIndex = data.targetIndex;
+                    
+                    document.getElementById('single-board').style.display = 'grid';
+                    document.getElementById('split-board').style.display = 'none';
+                    document.getElementById('chat-box').style.display = 'flex';
+                    
+                    resetGameState();
+                    renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+                    showScreen('game-screen');
+                    
+                    if(document.getElementById('chat-messages').children.length <= 1) {
+                        addSystemChat(`Connected to ${partnerNickname}.`);
+                    }
+                } 
+                else if (data.type === 'GUESS') {
+                    const el = document.getElementById('single-board').children[data.index];
+                    if (el) applyGuessResult(data.index, el, false);
+                } 
+                else if (data.type === 'CHAT') {
+                    addChatMessage(partnerNickname, data.message, false);
+                }
+            });
+
+            conn.on('close', () => {
+                alert("Partner disconnected.");
+                exitToLobby();
+            });
+        }
+
+        function startNewMatch() {
+            const data = generateGameData();
+            targetIndex = data.targetIndex;
+            myBoard = data.p1Board;
+
+            if (conn && conn.open) {
+                conn.send({
+                    type: 'START_GAME',
+                    board: data.p2Board,
+                    targetIndex: data.targetIndex,
+                    nickname: myNickname
+                });
             }
-        });
+
+            document.getElementById('single-board').style.display = 'grid';
+            document.getElementById('split-board').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'flex';
+            
+            resetGameState();
+            renderBoard('single-board', myBoard, (idx, el) => handleGuess(idx, el));
+            showScreen('game-screen');
+        }
+
+        // ==========================================
+        // OFFLINE SPLIT-SCREEN
+        // ==========================================
+        function startLocalMode() {
+            isLocalMode = true;
+            isHost = true;
+            myNickname = "Player 1";
+            partnerNickname = "Player 2";
+            
+            const data = generateGameData();
+            targetIndex = data.targetIndex;
+
+            document.getElementById('single-board').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'none';
+            document.getElementById('split-board').style.display = 'flex';
+            
+            resetGameState();
+            
+            renderBoard('p1-grid', data.p1Board, (idx, el) => {
+                applyGuessResult(idx, el, true);
+                if(!gameOver) {
+                    const p2El = document.getElementById('p2-grid').children[idx];
+                    p2El.classList.add('wrong', 'disabled');
+                }
+            });
+            
+            renderBoard('p2-grid', data.p2Board, (idx, el) => {
+                applyGuessResult(idx, el, false);
+                if(!gameOver) {
+                    const p1El = document.getElementById('p1-grid').children[idx];
+                    p1El.classList.add('wrong', 'disabled');
+                }
+            });
+
+            showScreen('game-screen');
+        }
+
+        // ==========================================
+        // UTILS & CHAT
+        // ==========================================
+        function exitToLobby() {
+            if (conn) { conn.close(); conn = null; }
+            if (peer) { peer.destroy(); peer = null; }
+            
+            // Clean up UI params
+            const url = new URL(window.location);
+            url.search = '';
+            window.history.replaceState({}, document.title, url);
+            
+            document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="sender">System</span>Connected to partner chat.</div>';
+            showScreen('lobby-screen');
+        }
+
+        function copyRoomLink() {
+            const url = window.location.origin + window.location.pathname + '?room=' + roomCode;
+            navigator.clipboard.writeText(url);
+            alert("Invite link copied!");
+        }
+
+        function sendChatMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if(!msg) return;
+            
+            addChatMessage(myNickname, msg, true);
+            if(conn && conn.open && !isLocalMode) {
+                conn.send({ type: 'CHAT', message: msg });
+            }
+            input.value = '';
+        }
+
+        function addChatMessage(sender, text, isMe) {
+            const box = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = isMe ? 'chat-msg me' : 'chat-msg';
+            msgDiv.innerHTML = `<span class="sender">${sender}</span>${text}`;
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function addSystemChat(text) {
+            const box = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-msg';
+            msgDiv.innerHTML = `<span class="sender">System</span>${text}`;
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
     </script>
 </body>
 </html>

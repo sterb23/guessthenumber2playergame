@@ -297,7 +297,6 @@
             font-weight: 900; box-shadow: 0 0 25px rgba(0, 255, 102, 0.9); z-index: 10;
         }
 
-        /* NEW: Highlight target in YELLOW on loss */
         .circle.revealed {
             background: var(--yellow) !important; border-color: var(--yellow) !important; color: #000000 !important;
             font-weight: 900; box-shadow: 0 0 25px rgba(255, 204, 0, 0.9); z-index: 10; opacity: 1 !important;
@@ -928,16 +927,42 @@
             roomCode = code;
             isHost = false;
             isLocalMode = false;
-            
+
+            const input = document.getElementById('room-input');
+            const oldVal = input.value;
+            input.value = "JOINING...";
+            input.disabled = true;
+
             peer = initPeer();
-            peer.on('open', () => { conn = peer.connect('samespot-room-' + code); setupConnection(); });
+            peer.on('open', () => { 
+                conn = peer.connect('samespot-room-' + code); 
+                setupConnection(); 
+            });
+            
+            peer.on('error', (err) => {
+                if (err.type === 'peer-unavailable') {
+                    alert("Room not found. Please check the code and try again.");
+                } else {
+                    alert("Connection error: " + err.type);
+                }
+                input.value = oldVal;
+                input.disabled = false;
+                exitToLobby();
+            });
         }
 
         function setupConnection() {
-            conn.on('open', () => { if (!isHost) conn.send({ type: 'READY_GUEST', username: userData.username }); });
+            conn.on('open', () => { 
+                if (isHost) {
+                    conn.send({ type: 'HOST_READY' });
+                }
+            });
 
             conn.on('data', (data) => {
-                if (data.type === 'READY_GUEST' && isHost) {
+                if (data.type === 'HOST_READY' && !isHost) {
+                    conn.send({ type: 'READY_GUEST', username: userData.username });
+                } 
+                else if (data.type === 'READY_GUEST' && isHost) {
                     currentPartnerUsername = data.username || "@partner";
                     startNewMatch(); 
                 } 
@@ -963,7 +988,10 @@
                 }
             });
 
-            conn.on('close', () => { alert("Partner disconnected."); exitToLobby(); });
+            conn.on('close', () => { 
+                alert("Partner disconnected."); 
+                exitToLobby(); 
+            });
         }
 
         function startNewMatch() {
@@ -1023,6 +1051,8 @@
             if (conn) { conn.close(); conn = null; }
             if (peer) { peer.destroy(); peer = null; }
             showScreen('lobby-screen');
+            const input = document.getElementById('room-input');
+            if(input) { input.disabled = false; input.value = ''; }
             updateProfileUI();
         }
 
